@@ -1,0 +1,61 @@
+@page "/game/{Id:int}"
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<h1>@game.DisplayTitle</h1>
+
+<MudTable Hover="true" Striped="true" Bordered="true" Items="@game.Agents">
+     <ToolBarContent>
+        <MudText Typo="Typo.h6" Class="mr-5">Agents</MudText>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+            Href="/game/create">
+            Add Agent
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTHeadRow>
+            <MudTh></MudTh>
+            @foreach (Parameter p in game.Parameters)
+            {
+                <MudTh colspan="@p.Ranges.Count">@p.DisplayName</MudTh>
+            }
+            <MudTh></MudTh>
+        </MudTHeadRow>
+        <MudTHeadRow>
+            <MudTh>Agent Name</MudTh>
+            @foreach (Parameter p in game.Parameters)
+            {
+                @foreach (ParameterRange range in p.Ranges)
+                {
+                    <MudTh>@range</MudTh>
+                }
+            }
+            <MudTh>Action</MudTh>
+        </MudTHeadRow>
+    </HeaderContent>
+    <RowTemplate Context="agent">
+        <MudTd>@agent.Name</MudTd>
+        @foreach (Parameter p in game.Parameters)
+        {
+            @foreach (ParameterRange range in p.Ranges)
+            {
+                <MudTd></MudTd>
+            }
+        }
+        <MudTd>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Download">
+                Download</MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    Game game;
+
+    protected override void OnParametersSet()
+    {
+        using var context = DbFactory.CreateDbContext();
+        game = context.Games.Include(g => g.Agents).Include(g => g.Parameters).ThenInclude(p => p.Ranges)
+        .First(g => g.Id == Id);
+    }
+}

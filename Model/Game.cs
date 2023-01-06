@@ -13,5 +13,6 @@ namespace LocalEnv.Model
         public string TesterPath { get; set; }
         public List<Parameter> Parameters { get; set; }
         public List<Agent> Agents { get; set; }
+        public string Folder => $"wwwroot/uploads/{Id}/";
     }
 }

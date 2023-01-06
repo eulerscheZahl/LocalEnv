@@ -1,11 +1,14 @@
 ﻿@page "/"
 @inject IDbContextFactory<AppDbContext> DbFactory
 
-<MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Href="/game/create">
-    Add Game
-</MudButton>
-
-<MudTable Items="@games" Hover="true">
+<MudTable Items="@games" Hover="true" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6" Class="mr-5">Games</MudText>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+            Href="/game/create">
+            Add Game
+        </MudButton>
+    </ToolBarContent>
     <HeaderContent>
         <MudTh>Game</MudTh>
         <MudTh>Export Name</MudTh>
@@ -17,8 +20,10 @@
         <MudTd>@context.ExportTitle</MudTd>
         <MudTd>@context.Agents.Count</MudTd>
         <MudTd>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Primary" Href=@($"/game/{context.Id}")>View</MudButton>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary" Href=@($"/game/edit/{context.Id}")>Edit</MudButton>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Primary"
+                Href=@($"/game/{context.Id}")>View</MudButton>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                Href=@($"/game/edit/{context.Id}")>Edit</MudButton>
         </MudTd>
     </RowTemplate>
 </MudTable>

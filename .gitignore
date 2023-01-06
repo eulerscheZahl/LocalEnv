@@ -1,3 +1,4 @@
 bin/
 obj/
 database.sqlite
+wwwroot/uploads/

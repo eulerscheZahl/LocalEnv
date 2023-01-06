@@ -3,6 +3,7 @@ using System;
 using LocalEnv.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LocalEnv.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230106155920_parameter-name")]
+    partial class parametername
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.1");
@@ -42,7 +45,7 @@ namespace LocalEnv.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.ToTable("Agents");
+                    b.ToTable("Agent");
                 });
 
             modelBuilder.Entity("LocalEnv.Model.Game", b =>
@@ -84,7 +87,7 @@ namespace LocalEnv.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.ToTable("Parameters");
+                    b.ToTable("Parameter");
                 });
 
             modelBuilder.Entity("LocalEnv.Model.ParameterRange", b =>
@@ -106,7 +109,7 @@ namespace LocalEnv.Migrations
 
                     b.HasIndex("ParameterId");
 
-                    b.ToTable("Ranges");
+                    b.ToTable("ParameterRange");
                 });
 
             modelBuilder.Entity("LocalEnv.Model.TestcaseResult", b =>

@@ -1,0 +1,42 @@
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@Parameter">
+            <DataAnnotationsValidator />
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Internal name" @bind-Value="Parameter.InternalName"
+                        For="@(() => Parameter.InternalName)" />
+                    <MudTextField Label="Display name" Class="mt-3" @bind-Value="Parameter.DisplayName"
+                        For="@(() => Parameter.DisplayName)" />
+                    <MudTextField Label="Range (e.g. 6-12,13-20)" Class="mt-3" @bind-Value="ranges"
+                        For="@(() => ranges)" />
+                </MudCardContent>
+            </MudCard>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Parameter Parameter { get; set; }
+    private string ranges = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Parameter.Ranges != null) ranges = string.Join(", ", Parameter.Ranges);
+    }
+
+    void Submit()
+    {
+        if (Parameter.Ranges == null) Parameter.Ranges = new();
+        Parameter.Ranges.Clear();
+        foreach (string part in ranges.Split(',')) Parameter.Ranges.Add(ParameterRange.Parse(part));
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}
