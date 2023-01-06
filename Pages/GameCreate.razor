@@ -1,0 +1,65 @@
+@page "/game/create"
+@page "/game/edit/{Id:int}"
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<h1>@Title()</h1>
+
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <MudCard>
+        <MudCardContent>
+            <MudTextField Label="Display Title" @bind-Value="model.DisplayTitle" For="@(() => model.DisplayTitle)" />
+            <MudTextField Label="Export Title" Class="mt-3" @bind-Value="model.ExportTitle"
+                For="@(() => model.ExportTitle)" />
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadReferee">
+                <ButtonTemplate Context="uploadContext">
+                    <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                        StartIcon="@Icons.Material.Filled.CloudUpload" for="@uploadContext">
+                        Upload Referee
+                    </MudButton>
+                </ButtonTemplate>
+            </MudFileUpload>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">
+                @ButtonText()
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</EditForm>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    Game model = new Game();
+
+    protected override void OnParametersSet()
+    {
+        if (Id == 0) return;
+        using var context = DbFactory.CreateDbContext();
+        model = context.Games.First(g => g.Id == Id);
+    }
+
+    private void OnValidSubmit(EditContext editContext)
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Games.Add(model);
+        context.SaveChanges();
+    }
+
+    private string Title()
+    {
+        if (Id == 0) return "Create a new game";
+        return "Edit game";
+    }
+
+    private string ButtonText()
+    {
+        if (Id == 0) return "Create";
+        return "Update";
+    }
+
+    private void UploadReferee(IBrowserFile file)
+    {
+
+    }
+}

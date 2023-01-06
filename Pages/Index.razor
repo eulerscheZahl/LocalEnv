@@ -1,0 +1,34 @@
+﻿@page "/"
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Href="/game/create">
+    Add Game
+</MudButton>
+
+<MudTable Items="@games" Hover="true">
+    <HeaderContent>
+        <MudTh>Game</MudTh>
+        <MudTh>Export Name</MudTh>
+        <MudTh>Agents</MudTh>
+        <MudTh>Action</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.DisplayTitle</MudTd>
+        <MudTd>@context.ExportTitle</MudTd>
+        <MudTd>@context.Agents.Count</MudTd>
+        <MudTd>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Primary" Href=@($"/game/{context.Id}")>View</MudButton>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary" Href=@($"/game/edit/{context.Id}")>Edit</MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Game> games = new();
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        using var context = DbFactory.CreateDbContext();
+        games = context.Games.OrderByDescending(g => g.Id).Include(g => g.Agents).ToList();
+    }
+}
