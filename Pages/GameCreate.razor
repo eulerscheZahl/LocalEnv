@@ -55,28 +55,41 @@
             </MudTable>
         </MudCardContent>
         <MudCardActions>
-            @if (Id == 0)
+            @if (generatingSeedInfo)
             {
-                <MudButton Variant="Variant.Filled" Href="/" Class="mr-2">
-                    Back to list
-                </MudButton>
+                <MudAlert Severity="Severity.Info">
+                    <MudProgressLinear Color="Color.Primary" Value="@seedProgress" Class="my-7" />
+                    Generating seed info, this can take a moment
+                </MudAlert>
             }
             else
             {
-                <MudButton Variant="Variant.Filled" Href="@($"/game/{Id}")" Class="mr-2">
-                    Back to game
+                @if (Id == 0)
+                {
+                    <MudButton Variant="Variant.Filled" Href="/" Class="mr-2">
+                        Back to list
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" Href="@($"/game/{Id}")" Class="mr-2">
+                        Back to game
+                    </MudButton>
+                }
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
+                    @ButtonText()
                 </MudButton>
             }
-            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
-                @ButtonText()
-            </MudButton>
         </MudCardActions>
     </MudCard>
 </EditForm>
 
+
 @code {
     [Parameter] public int Id { get; set; }
-    Game model = new Game { Maximize = true };
+    private Game model = new Game { Maximize = true };
+    private bool generatingSeedInfo = false;
+    private int seedProgress = 0;
 
     protected override void OnParametersSet()
     {
@@ -91,7 +104,9 @@
         if (model.Id == 0) context.Games.Add(model);
         else
         {
-            Game existing = context.Games.Include(g => g.Parameters).ThenInclude(p => p.Ranges)
+            Game existing = context.Games
+            .Include(g => g.Parameters).ThenInclude(p => p.Ranges)
+            .Include(g => g.SeedInfos).ThenInclude(s => s.ParameterValues).ThenInclude(p => p.Parameter)
             .First(g => g.Id == model.Id);
             existing.DisplayTitle = model.DisplayTitle;
             existing.ExportTitle = model.ExportTitle;
@@ -124,14 +139,25 @@
             model = existing;
         }
         context.SaveChanges();
+
         if (file != null)
         {
             model.TesterPath = model.Folder + file.Name;
             Directory.CreateDirectory(model.Folder);
             using FileStream fs = new(model.TesterPath, FileMode.Create);
             await file.OpenReadStream().CopyToAsync(fs);
+            fs.Close();
             context.SaveChanges();
         }
+
+        generatingSeedInfo = true;
+        for (int i = 0; i < model.SeedCount; i++)
+        {
+            seedProgress = 100 * i / model.SeedCount;
+            await Task.Run(() => Thread.Sleep(100));
+            StateHasChanged();
+        }
+
         navigationManager.NavigateTo("/game/" + model.Id);
     }
 

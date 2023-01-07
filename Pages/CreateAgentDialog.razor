@@ -58,10 +58,11 @@
         Directory.CreateDirectory(Path.GetDirectoryName(agent.CodePath));
         using FileStream fs = new(agent.CodePath, FileMode.Create);
         await file.OpenReadStream().CopyToAsync(fs);
+        fs.Close();
 
         agent.BinaryPath = Game.Folder + agent.Id + "/binary/";
         Directory.CreateDirectory(Path.GetDirectoryName(agent.BinaryPath));
-        agent.Compile();
+        await agent.Compile();
 
         context.SaveChanges();
         MudDialog.Close(DialogResult.Ok(true));

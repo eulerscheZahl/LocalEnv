@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics;
+using System.IO.Compression;
 
 namespace LocalEnv.Model
 {
@@ -17,9 +19,43 @@ namespace LocalEnv.Model
         private Dictionary<int, double> absoluteScorePerSeed = new();
         private double totalScore = 0;
 
-        public void Compile()
+        public async Task Compile()
         {
+            string tmpDir = Path.GetTempPath() + Guid.NewGuid() + "/";
+            Directory.CreateDirectory(tmpDir);
+            File.WriteAllText(tmpDir + "project.csproj",
+@"<Project Sdk=""Microsoft.NET.Sdk"">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+</Project>");
+            File.WriteAllText(tmpDir + "code.cs", await BundleCode());
+            Process process = Process.Start("dotnet", "publish " + tmpDir + "project.csproj" + " -c Release -o " + Directory.GetCurrentDirectory() + "/" + BinaryPath);
+            await process.WaitForExitAsync();
+        }
 
+        public async Task<string> BundleCode()
+        {
+            using ZipArchive archive = ZipFile.Open(CodePath, ZipArchiveMode.Read);
+            HashSet<string> usings = new();
+            List<string> code = new();
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                StreamReader reader = new StreamReader(entry.Open());
+                string content = await reader.ReadToEndAsync();
+                bool inUsings = true;
+                code.Add("");
+                code.Add("");
+                foreach (string line in content.Split("\r\n".ToCharArray()))
+                {
+                    if (!line.StartsWith("using")) inUsings = false;
+                    if (inUsings) usings.Add(line);
+                    else code.Add(line);
+                }
+            }
+            code.InsertRange(0, usings.OrderBy(u => u));
+            return string.Join(Environment.NewLine, code);
         }
 
         public void UpdateSeedScore(SeedInfo seedInfo, Game game)
