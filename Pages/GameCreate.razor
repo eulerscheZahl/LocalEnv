@@ -2,6 +2,7 @@
 @page "/game/edit/{Id:int}"
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IDialogService DialogService
+@inject NavigationManager navigationManager
 
 <h1>@Title()</h1>
 
@@ -23,6 +24,11 @@
                 </MudFileUpload>
                 <MudText>@(file?.Name ?? Path.GetFileName(model.TesterPath))</MudText>
             </div>
+            <MudCheckBox T="bool" Label="Maximize" Class="mt-3" @bind-Checked="model.Maximize" />
+            <MudTextField Label="Seed Start" Class="mt-3" @bind-Value="model.SeedStart"
+                For="@(() => model.SeedStart)" />
+            <MudTextField Label="Seed Count" Class="mt-3" @bind-Value="model.SeedCount"
+                For="@(() => model.SeedCount)" />
             <MudTable Class="mt-3" Hover="true" Striped="true" Items="@model.Parameters">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6" Class="mr-5">Parameters</MudText>
@@ -40,7 +46,7 @@
                     <MudTd>@parameter.DisplayName</MudTd>
                     <MudTd>@(string.Join(", ", parameter.Ranges))</MudTd>
                     <MudTd>
-                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit"
+                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Class="mr-2"
                             Color="Color.Primary" OnClick="()=>EditParameter(parameter)">Edit</MudButton>
                         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete"
                             Color="Color.Error" OnClick="()=>DeleteParameter(parameter)">Delete</MudButton>
@@ -49,7 +55,19 @@
             </MudTable>
         </MudCardContent>
         <MudCardActions>
-            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">
+            @if (Id == 0)
+            {
+                <MudButton Variant="Variant.Filled" Href="/" Class="mr-2">
+                    Back to list
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Href="@($"/game/{Id}")" Class="mr-2">
+                    Back to game
+                </MudButton>
+            }
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
                 @ButtonText()
             </MudButton>
         </MudCardActions>
@@ -58,7 +76,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    Game model = new Game();
+    Game model = new Game { Maximize = true };
 
     protected override void OnParametersSet()
     {
@@ -77,6 +95,9 @@
             .First(g => g.Id == model.Id);
             existing.DisplayTitle = model.DisplayTitle;
             existing.ExportTitle = model.ExportTitle;
+            existing.Maximize = model.Maximize;
+            existing.SeedStart = model.SeedStart;
+            existing.SeedCount = model.SeedCount;
             foreach (Parameter deleteParam in existing.Parameters.ToList())
             {
                 Parameter partner = model.Parameters.FirstOrDefault(mp => mp.Id == deleteParam.Id);
@@ -111,6 +132,7 @@
             await file.OpenReadStream().CopyToAsync(fs);
             context.SaveChanges();
         }
+        navigationManager.NavigateTo("/game/" + model.Id);
     }
 
     private string Title()

@@ -13,18 +13,11 @@
         <MudTh>Game</MudTh>
         <MudTh>Export Name</MudTh>
         <MudTh>Agents</MudTh>
-        <MudTh>Action</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd>@context.DisplayTitle</MudTd>
+        <MudTd><MudLink Href=@($"/game/{context.Id}")>@context.DisplayTitle</MudLink></MudTd>
         <MudTd>@context.ExportTitle</MudTd>
         <MudTd>@context.Agents.Count</MudTd>
-        <MudTd>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Primary"
-                Href=@($"/game/{context.Id}")>View</MudButton>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                Href=@($"/game/edit/{context.Id}")>Edit</MudButton>
-        </MudTd>
     </RowTemplate>
 </MudTable>
 

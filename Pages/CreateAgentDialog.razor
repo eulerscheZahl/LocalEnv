@@ -1,0 +1,71 @@
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@Agent">
+            <DataAnnotationsValidator />
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Name" @bind-Value="Agent.Name" For="@(() => Agent.Name)" />
+                    <MudSelect Class="mt-3" T="string" Label="Language" AnchorOrigin="Origin.BottomCenter"
+                        @bind-Value="Agent.Language" For="@(() => Agent.Language)">
+                        <MudSelectItem Value="@("C++")" />
+                        <MudSelectItem Value="@("C#")" />
+                        <MudSelectItem Value="@("Java")" />
+                        <MudSelectItem Value="@("Python")" />
+                    </MudSelect>
+                    <div class="mt-3">
+                        <MudFileUpload T="IBrowserFile" FilesChanged="UploadAgent">
+                            <ButtonTemplate Context="uploadContext">
+                                <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                                    StartIcon="@Icons.Material.Filled.CloudUpload" for="@uploadContext">
+                                    Upload Agent
+                                </MudButton>
+                            </ButtonTemplate>
+                        </MudFileUpload>
+                        <MudText>@(file?.Name)</MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Game Game { get; set; }
+    [Parameter] public Agent Agent { get; set; }
+
+    private IBrowserFile file;
+    private void UploadAgent(IBrowserFile toUpload)
+    {
+        file = toUpload;
+    }
+
+    private async Task Submit()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Game game = context.Games.Include(g => g.Agents).First(g => g.Id == Game.Id);
+        Agent agent = new Agent { Name = Agent.Name, Language = Agent.Language };
+        game.Agents.Add(agent);
+        context.SaveChanges();
+
+        agent.CodePath = Game.Folder + agent.Id + "/" + file.Name;
+        Directory.CreateDirectory(Path.GetDirectoryName(agent.CodePath));
+        using FileStream fs = new(agent.CodePath, FileMode.Create);
+        await file.OpenReadStream().CopyToAsync(fs);
+
+        agent.BinaryPath = Game.Folder + agent.Id + "/binary/";
+        Directory.CreateDirectory(Path.GetDirectoryName(agent.BinaryPath));
+        agent.Compile();
+
+        context.SaveChanges();
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

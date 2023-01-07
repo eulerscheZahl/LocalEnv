@@ -3,6 +3,7 @@ using System;
 using LocalEnv.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LocalEnv.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230107060845_seed-info")]
+    partial class seedinfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.1");
@@ -56,9 +59,6 @@ namespace LocalEnv.Migrations
 
                     b.Property<string>("ExportTitle")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("Maximize")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("SeedCount")
                         .HasColumnType("INTEGER");
@@ -118,30 +118,6 @@ namespace LocalEnv.Migrations
                     b.ToTable("Ranges");
                 });
 
-            modelBuilder.Entity("LocalEnv.Model.ParameterValue", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("ParameterId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("SeedInfoId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("Value")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParameterId");
-
-                    b.HasIndex("SeedInfoId");
-
-                    b.ToTable("ParameterValue");
-                });
-
             modelBuilder.Entity("LocalEnv.Model.SeedInfo", b =>
                 {
                     b.Property<int>("Id")
@@ -151,12 +127,20 @@ namespace LocalEnv.Migrations
                     b.Property<int?>("GameId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ParameterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("ParameterValue")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("Seed")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("ParameterId");
 
                     b.ToTable("SeedInfos");
                 });
@@ -207,24 +191,17 @@ namespace LocalEnv.Migrations
                         .HasForeignKey("ParameterId");
                 });
 
-            modelBuilder.Entity("LocalEnv.Model.ParameterValue", b =>
-                {
-                    b.HasOne("LocalEnv.Model.Parameter", "Parameter")
-                        .WithMany()
-                        .HasForeignKey("ParameterId");
-
-                    b.HasOne("LocalEnv.Model.SeedInfo", null)
-                        .WithMany("ParameterValues")
-                        .HasForeignKey("SeedInfoId");
-
-                    b.Navigation("Parameter");
-                });
-
             modelBuilder.Entity("LocalEnv.Model.SeedInfo", b =>
                 {
                     b.HasOne("LocalEnv.Model.Game", null)
                         .WithMany("SeedInfos")
                         .HasForeignKey("GameId");
+
+                    b.HasOne("LocalEnv.Model.Parameter", "Parameter")
+                        .WithMany()
+                        .HasForeignKey("ParameterId");
+
+                    b.Navigation("Parameter");
                 });
 
             modelBuilder.Entity("LocalEnv.Model.TestcaseResult", b =>
@@ -251,11 +228,6 @@ namespace LocalEnv.Migrations
             modelBuilder.Entity("LocalEnv.Model.Parameter", b =>
                 {
                     b.Navigation("Ranges");
-                });
-
-            modelBuilder.Entity("LocalEnv.Model.SeedInfo", b =>
-                {
-                    b.Navigation("ParameterValues");
                 });
 #pragma warning restore 612, 618
         }

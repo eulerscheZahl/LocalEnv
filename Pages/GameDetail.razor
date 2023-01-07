@@ -1,18 +1,53 @@
 @page "/game/{Id:int}"
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject IDialogService DialogService
 
-<h1>@game.DisplayTitle</h1>
+<style type="text/css">
+    .mud-table-head .header-centered th {
+        text-align: center;
+        font-size: 1.2em;
+    }
 
-<MudTable Hover="true" Striped="true" Bordered="true" Items="@game.Agents">
-     <ToolBarContent>
+    .w200 {
+        max-width: 200px;
+    }
+</style>
+
+<h1>@game.DisplayTitle - @game.ExportTitle</h1>
+
+<div class="d-flex">
+    <MudNumericField Label="Number of threads" @bind-Value="maxThreads" For="(() => maxThreads)" Class="mr-5 w200" />
+    @if (game.Running)
+    {
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Stop" Color="Color.Error" OnClick="Stop">
+            Stop
+        </MudButton>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Primary"
+        OnClick="Start">
+            Start
+        </MudButton>
+    }
+    <MudButton Class="ml-5" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+        Href="@($"/game/edit/{Id}")">
+        Edit
+    </MudButton>
+</div>
+
+<MudTable Hover="true" Striped="true" Bordered="true" Items="@game.Agents" CustomHeader="true"
+    HeaderClass="table-head-bordered">
+    <ToolBarContent>
         <MudText Typo="Typo.h6" Class="mr-5">Agents</MudText>
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
-            Href="/game/create">
+            OnClick="AddAgent">
             Add Agent
         </MudButton>
     </ToolBarContent>
     <HeaderContent>
-        <MudTHeadRow>
+        <MudTHeadRow Class="header-centered">
+            <MudTh></MudTh>
             <MudTh></MudTh>
             @foreach (Parameter p in game.Parameters)
             {
@@ -22,6 +57,7 @@
         </MudTHeadRow>
         <MudTHeadRow>
             <MudTh>Agent Name</MudTh>
+            <MudTh>Score</MudTh>
             @foreach (Parameter p in game.Parameters)
             {
                 @foreach (ParameterRange range in p.Ranges)
@@ -34,6 +70,7 @@
     </HeaderContent>
     <RowTemplate Context="agent">
         <MudTd>@agent.Name</MudTd>
+        <MudTd>@agent.Score</MudTd>
         @foreach (Parameter p in game.Parameters)
         {
             @foreach (ParameterRange range in p.Ranges)
@@ -50,12 +87,44 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    Game game;
+    private Game game;
+    private int maxThreads = 4;
 
     protected override void OnParametersSet()
     {
         using var context = DbFactory.CreateDbContext();
-        game = context.Games.Include(g => g.Agents).Include(g => g.Parameters).ThenInclude(p => p.Ranges)
+        game = context.Games
+        .Include(g => g.Parameters)
+        .ThenInclude(p => p.Ranges)
+        .Include(g => g.SeedInfos)
+        .ThenInclude(s => s.ParameterValues)
+        .ThenInclude(p => p.Parameter)
+        .Include(g => g.Agents)
+        .ThenInclude(a => a.TestcaseResults)
         .First(g => g.Id == Id);
+    }
+
+    private async Task AddAgent()
+    {
+        var parameters = new DialogParameters();
+        Agent agent = new Agent { TestcaseResults = new(), Language="C#" };
+        parameters.Add("Agent", agent);
+        parameters.Add("Game", game);
+        var dialog = await DialogService.ShowAsync<CreateAgentDialog>("Agent", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            game.Agents.Add(agent);
+        }
+    }
+
+    private void Stop()
+    {
+        game.Running = false;
+    }
+
+    private void Start()
+    {
+        game.Running = true;
     }
 }
