@@ -79,5 +79,30 @@ namespace LocalEnv.Model
             }
             SeedInfos.Add(info);
         }
+
+        public void InitScores()
+        {
+            Dictionary<int, SeedInfo> infos = SeedInfos.ToDictionary(s => s.Seed, s => s);
+            // find best absolute scores
+            foreach (Agent agent in Agents)
+            {
+                foreach (TestcaseResult result in agent.TestcaseResults)
+                {
+                    SeedInfo info = infos[result.Seed];
+                    if (info.BestScore == 0) info.BestScore = result.Score;
+                    else if (Maximize) info.BestScore = Math.Max(info.BestScore, result.Score);
+                    else info.BestScore = Math.Min(info.BestScore, result.Score);
+                }
+            }
+
+            // find relative scores
+            foreach (Agent agent in Agents)
+            {
+                foreach (TestcaseResult result in agent.TestcaseResults)
+                {
+                    agent.LoadTestcaseResult(infos[result.Seed], this, result);
+                }
+            }
+        }
     }
 }

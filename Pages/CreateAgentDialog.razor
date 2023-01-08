@@ -50,7 +50,7 @@
     {
         using var context = DbFactory.CreateDbContext();
         Game game = context.Games.Include(g => g.Agents).First(g => g.Id == Game.Id);
-        Agent agent = new Agent { Name = Agent.Name, Language = Agent.Language };
+        Agent agent = new Agent { Name = Agent.Name, Language = Agent.Language, TestcaseResults = new() };
         game.Agents.Add(agent);
         context.SaveChanges();
 
@@ -65,7 +65,7 @@
         await agent.Compile();
 
         context.SaveChanges();
-        MudDialog.Close(DialogResult.Ok(true));
+        MudDialog.Close(DialogResult.Ok(agent));
     }
 
     private void Cancel() => MudDialog.Cancel();

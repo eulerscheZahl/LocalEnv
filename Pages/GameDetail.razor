@@ -70,7 +70,13 @@
     </HeaderContent>
     <RowTemplate Context="agent">
         <MudTd>@agent.Name</MudTd>
-        <MudTd>@agent.Score</MudTd>
+        <MudTd>
+            @FormatNumber(agent.Score)
+            @if (agent.Progress(game.SeedCount) != 100)
+            {
+                <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@agent.Progress(game.SeedCount)" />
+            }
+        </MudTd>
         @foreach (Parameter p in game.Parameters)
         {
             @foreach (ParameterRange range in p.Ranges)
@@ -79,7 +85,7 @@
             }
         }
         <MudTd>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Download">
+            <MudButton Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Download">
                 Download</MudButton>
         </MudTd>
     </RowTemplate>
@@ -90,7 +96,7 @@
     private Game game;
     private int maxThreads = 4;
     private int MaxThreads { get => maxThreads; set { maxThreads = value; PlayQueue(); } }
-    private Queue<(Agent agent, SeedInfo seedInfo)> toRun = new();
+    private PriorityQueue<(Agent agent, SeedInfo seedInfo), int> toRun = new();
 
     protected override void OnParametersSet()
     {
@@ -103,23 +109,28 @@
         .ThenInclude(p => p.Parameter)
         .Include(g => g.Agents)
         .ThenInclude(a => a.TestcaseResults)
+        .AsSplitQuery()
         .First(g => g.Id == Id);
+        game.Agents = game.Agents.OrderByDescending(a => a.Id).ToList();
+        game.InitScores();
 
         foreach (Agent agent in game.Agents) PopulateQueue(agent);
+        StateHasChanged();
         PlayQueue();
     }
 
     private async Task AddAgent()
     {
         var parameters = new DialogParameters();
-        Agent agent = new Agent { TestcaseResults = new(), Language = "C#" };
+        Agent agent = new Agent { Language = "C#" };
         parameters.Add("Agent", agent);
         parameters.Add("Game", game);
         var dialog = await DialogService.ShowAsync<CreateAgentDialog>("Agent", parameters);
         var result = await dialog.Result;
         if (!result.Canceled)
         {
-            game.Agents.Add(agent);
+            agent = result.Data as Agent;
+            game.Agents.Insert(0, agent);
             PopulateQueue(agent);
         }
         PlayQueue();
@@ -127,11 +138,10 @@
 
     private void PopulateQueue(Agent agent)
     {
-        HashSet<int> existing = agent.TestcaseResults.Select(r => r.Seed).ToHashSet();
+        Dictionary<int, TestcaseResult> existing = agent.TestcaseResults.ToDictionary(t => t.Seed, t => t);
         foreach (SeedInfo seedInfo in game.SeedInfos)
         {
-            if (existing.Contains(seedInfo.Seed)) continue;
-            toRun.Enqueue((agent, seedInfo));
+            if (!existing.ContainsKey(seedInfo.Seed)) toRun.Enqueue((agent, seedInfo), seedInfo.Seed);
         }
     }
 
@@ -179,15 +189,23 @@
                 int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
                 TestcaseResult result = new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
                 agent.AddTestcaseResult(info, game, result);
-                using var context = DbFactory.CreateDbContext();
-                agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
-                agent.AddTestcaseResult(info, game, result);
-                context.SaveChanges();
+                lock (toRun)
+                {
+                    using var context = DbFactory.CreateDbContext();
+                    agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
+                    agent.AddTestcaseResult(info, game, result);
+                    context.SaveChanges();
+                }
                 await InvokeAsync(StateHasChanged);
             }
         }).Start();
     }
 
+    private string FormatNumber(double number) => number.ToString("0.000");
+
     private void Stop() => game.Running = false;
-    private void Start() => game.Running = true;
+    private void Start() {
+        game.Running = true;
+        PlayQueue();
+    }
 }
