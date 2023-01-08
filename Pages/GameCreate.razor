@@ -6,13 +6,13 @@
 
 <h1>@Title()</h1>
 
-<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+<EditForm Model="@game" OnValidSubmit="OnValidSubmit">
     <DataAnnotationsValidator />
     <MudCard>
         <MudCardContent>
-            <MudTextField Label="Display Title" @bind-Value="model.DisplayTitle" For="@(() => model.DisplayTitle)" />
-            <MudTextField Label="Export Title" Class="mt-3" @bind-Value="model.ExportTitle"
-                For="@(() => model.ExportTitle)" />
+            <MudTextField Label="Display Title" @bind-Value="game.DisplayTitle" For="@(() => game.DisplayTitle)" />
+            <MudTextField Label="Export Title" Class="mt-3" @bind-Value="game.ExportTitle"
+                For="@(() => game.ExportTitle)" />
             <div class="mt-3">
                 <MudFileUpload T="IBrowserFile" FilesChanged="UploadReferee">
                     <ButtonTemplate Context="uploadContext">
@@ -22,14 +22,12 @@
                         </MudButton>
                     </ButtonTemplate>
                 </MudFileUpload>
-                <MudText>@(file?.Name ?? Path.GetFileName(model.TesterPath))</MudText>
+                <MudText>@(file?.Name ?? Path.GetFileName(game.TesterPath))</MudText>
             </div>
-            <MudCheckBox T="bool" Label="Maximize" Class="mt-3" @bind-Checked="model.Maximize" />
-            <MudTextField Label="Seed Start" Class="mt-3" @bind-Value="model.SeedStart"
-                For="@(() => model.SeedStart)" />
-            <MudTextField Label="Seed Count" Class="mt-3" @bind-Value="model.SeedCount"
-                For="@(() => model.SeedCount)" />
-            <MudTable Class="mt-3" Hover="true" Striped="true" Items="@model.Parameters">
+            <MudCheckBox T="bool" Label="Maximize" Class="mt-3" @bind-Checked="game.Maximize" />
+            <MudTextField Label="Seed Start" Class="mt-3" @bind-Value="game.SeedStart" For="@(() => game.SeedStart)" />
+            <MudTextField Label="Seed Count" Class="mt-3" @bind-Value="game.SeedCount" For="@(() => game.SeedCount)" />
+            <MudTable Class="mt-3" Hover="true" Striped="true" Items="@game.Parameters">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6" Class="mr-5">Parameters</MudText>
                     <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
@@ -87,7 +85,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Game model = new Game { Maximize = true };
+    private Game game = new Game { Maximize = true };
     private bool generatingSeedInfo = false;
     private int seedProgress = 0;
 
@@ -95,32 +93,34 @@
     {
         if (Id == 0) return;
         using var context = DbFactory.CreateDbContext();
-        model = context.Games.Include(g => g.Parameters).ThenInclude(p => p.Ranges).First(g => g.Id == Id);
+        game = context.Games.Include(g => g.Parameters).ThenInclude(p => p.Ranges).First(g => g.Id == Id);
     }
 
     private async Task OnValidSubmit(EditContext editContext)
     {
         using var context = DbFactory.CreateDbContext();
-        if (model.Id == 0) context.Games.Add(model);
+        if (game.Id == 0) context.Games.Add(game);
         else
         {
             Game existing = context.Games
             .Include(g => g.Parameters).ThenInclude(p => p.Ranges)
             .Include(g => g.SeedInfos).ThenInclude(s => s.ParameterValues).ThenInclude(p => p.Parameter)
-            .First(g => g.Id == model.Id);
-            existing.DisplayTitle = model.DisplayTitle;
-            existing.ExportTitle = model.ExportTitle;
-            existing.Maximize = model.Maximize;
-            existing.SeedStart = model.SeedStart;
-            existing.SeedCount = model.SeedCount;
+            .First(g => g.Id == game.Id);
+            existing.DisplayTitle = game.DisplayTitle;
+            existing.ExportTitle = game.ExportTitle;
+            existing.Maximize = game.Maximize;
+            existing.SeedStart = game.SeedStart;
+            existing.SeedCount = game.SeedCount;
+            bool parametersChanged = game.Parameters.Any(p => p.Id == 0 || p.Ranges.Any(r => r.Id == 0));
             foreach (Parameter deleteParam in existing.Parameters.ToList())
             {
-                Parameter partner = model.Parameters.FirstOrDefault(mp => mp.Id == deleteParam.Id);
+                Parameter partner = game.Parameters.FirstOrDefault(mp => mp.Id == deleteParam.Id);
                 if (partner == null)
                 {
                     existing.Parameters.Remove(deleteParam);
                     context.Parameters.Remove(deleteParam);
                     context.Ranges.RemoveRange(deleteParam.Ranges);
+                    parametersChanged = true;
                 }
                 else
                 {
@@ -130,35 +130,43 @@
                         {
                             deleteParam.Ranges.Remove(deleteRange);
                             context.Ranges.Remove(deleteRange);
+                            parametersChanged = true;
                         }
                     }
                     deleteParam.Ranges.AddRange(partner.Ranges.Where(r => r.Id == 0));
                 }
             }
-            existing.Parameters.AddRange(model.Parameters.Where(p => p.Id == 0));
-            model = existing;
+            existing.Parameters.AddRange(game.Parameters.Where(p => p.Id == 0));
+            if (parametersChanged)
+            {
+                context.SeedInfos.RemoveRange(existing.SeedInfos.ToList());
+                context.ParameterValues.RemoveRange(existing.SeedInfos.SelectMany(s => s.ParameterValues).ToList());
+                existing.SeedInfos.Clear();
+            }
+            game = existing;
         }
         context.SaveChanges();
 
         if (file != null)
         {
-            model.TesterPath = model.Folder + file.Name;
-            Directory.CreateDirectory(model.Folder);
-            using FileStream fs = new(model.TesterPath, FileMode.Create);
+            game.TesterPath = game.Folder + file.Name;
+            Directory.CreateDirectory(game.Folder);
+            using FileStream fs = new(game.TesterPath, FileMode.Create);
             await file.OpenReadStream().CopyToAsync(fs);
             fs.Close();
             context.SaveChanges();
         }
 
         generatingSeedInfo = true;
-        for (int i = 0; i < model.SeedCount; i++)
+        for (int i = 0; i < game.SeedCount; i++)
         {
-            seedProgress = 100 * i / model.SeedCount;
-            await Task.Run(() => Thread.Sleep(100));
+            seedProgress = 100 * i / game.SeedCount;
+            await game.GenerateSeedInfo(game.SeedStart + i);
             StateHasChanged();
         }
+        context.SaveChanges();
 
-        navigationManager.NavigateTo("/game/" + model.Id);
+        navigationManager.NavigateTo("/game/" + game.Id);
     }
 
     private string Title()
@@ -187,12 +195,12 @@
         var result = await dialog.Result;
         if (!result.Canceled)
         {
-            if (!model.Parameters.Contains(parameter)) model.Parameters.Add(parameter);
+            if (!game.Parameters.Contains(parameter)) game.Parameters.Add(parameter);
         }
     }
 
     private void DeleteParameter(Parameter parameter)
     {
-        model.Parameters.Remove(parameter);
+        game.Parameters.Remove(parameter);
     }
 }

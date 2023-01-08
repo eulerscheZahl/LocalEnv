@@ -14,6 +14,7 @@ namespace LocalEnv.Model
         public List<TestcaseResult> TestcaseResults { get; set; }
 
         [NotMapped] public bool Running { get; set; } = true;
+        public string ExecuteCommand => "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
         public double Score => 100 * totalScore / relativeScorePerSeed.Count;
         private Dictionary<int, double> relativeScorePerSeed = new();
         private Dictionary<int, double> absoluteScorePerSeed = new();
@@ -60,6 +61,7 @@ namespace LocalEnv.Model
 
         public void UpdateSeedScore(SeedInfo seedInfo, Game game)
         {
+            if (!relativeScorePerSeed.ContainsKey(seedInfo.Seed)) return;
             totalScore -= relativeScorePerSeed[seedInfo.Seed];
             relativeScorePerSeed[seedInfo.Seed] = game.ComputeRelativeScore(seedInfo, absoluteScorePerSeed[seedInfo.Seed]);
             totalScore += relativeScorePerSeed[seedInfo.Seed];

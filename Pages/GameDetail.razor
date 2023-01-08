@@ -16,7 +16,7 @@
 <h1>@game.DisplayTitle - @game.ExportTitle</h1>
 
 <div class="d-flex">
-    <MudNumericField Label="Number of threads" @bind-Value="maxThreads" For="(() => maxThreads)" Class="mr-5 w200" />
+    <MudNumericField Label="Number of threads" @bind-Value="MaxThreads" For="(() => MaxThreads)" Class="mr-5 w200" />
     @if (game.Running)
     {
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Stop" Color="Color.Error" OnClick="Stop">
@@ -89,6 +89,8 @@
     [Parameter] public int Id { get; set; }
     private Game game;
     private int maxThreads = 4;
+    private int MaxThreads { get => maxThreads; set { maxThreads = value; PlayQueue(); } }
+    private Queue<(Agent agent, SeedInfo seedInfo)> toRun = new();
 
     protected override void OnParametersSet()
     {
@@ -102,12 +104,15 @@
         .Include(g => g.Agents)
         .ThenInclude(a => a.TestcaseResults)
         .First(g => g.Id == Id);
+
+        foreach (Agent agent in game.Agents) PopulateQueue(agent);
+        PlayQueue();
     }
 
     private async Task AddAgent()
     {
         var parameters = new DialogParameters();
-        Agent agent = new Agent { TestcaseResults = new(), Language="C#" };
+        Agent agent = new Agent { TestcaseResults = new(), Language = "C#" };
         parameters.Add("Agent", agent);
         parameters.Add("Game", game);
         var dialog = await DialogService.ShowAsync<CreateAgentDialog>("Agent", parameters);
@@ -115,16 +120,74 @@
         if (!result.Canceled)
         {
             game.Agents.Add(agent);
+            PopulateQueue(agent);
+        }
+        PlayQueue();
+    }
+
+    private void PopulateQueue(Agent agent)
+    {
+        HashSet<int> existing = agent.TestcaseResults.Select(r => r.Seed).ToHashSet();
+        foreach (SeedInfo seedInfo in game.SeedInfos)
+        {
+            if (existing.Contains(seedInfo.Seed)) continue;
+            toRun.Enqueue((agent, seedInfo));
         }
     }
 
-    private void Stop()
+    private int runningCount = 0;
+    private void PlayQueue()
     {
-        game.Running = false;
+        while (toRun.Count > 0 && runningCount < MaxThreads)
+        {
+            runningCount++;
+            RunQueueThread();
+        }
     }
 
-    private void Start()
+    private void RunQueueThread()
     {
-        game.Running = true;
+        new Thread(async () => {
+            while (true)
+            {
+                Agent agent = null;
+                SeedInfo info = null;
+                lock (toRun)
+                {
+                    if (!game.Running || runningCount > maxThreads || toRun.Count == 0)
+                    {
+                        runningCount--;
+                        break;
+                    }
+                    (agent, info) = toRun.Dequeue();
+                }
+
+                Process process = new Process();
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
+                process.StartInfo.FileName = "java";
+                process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -novis -seed {info.Seed} -exec \"{agent.ExecuteCommand}\"";
+                process.Start();
+                string stdOut = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                string line = stdOut.Trim();
+
+                Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
+                double score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
+                match = Regex.Match(line, @"Time = (?<number>\d+)");
+                int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
+                TestcaseResult result = new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
+                agent.AddTestcaseResult(info, game, result);
+                using var context = DbFactory.CreateDbContext();
+                agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
+                agent.AddTestcaseResult(info, game, result);
+                context.SaveChanges();
+                await InvokeAsync(StateHasChanged);
+            }
+        }).Start();
     }
+
+    private void Stop() => game.Running = false;
+    private void Start() => game.Running = true;
 }

@@ -6,7 +6,7 @@ namespace LocalEnv.Model
         public double MinValue { get; set; }
         public double MaxValue { get; set; }
 
-        public override string ToString() => MinValue + "-" + MaxValue;
+        public override string ToString() => MinValue == MaxValue ? MinValue.ToString() : MinValue + "-" + MaxValue;
 
         public static ParameterRange Parse(string text)
         {
@@ -14,7 +14,7 @@ namespace LocalEnv.Model
             ParameterRange range = new ParameterRange
             {
                 MinValue = double.Parse(parts[0]),
-                MaxValue = double.Parse(parts[1]),
+                MaxValue = double.Parse(parts[^1]),
             };
             return range;
         }

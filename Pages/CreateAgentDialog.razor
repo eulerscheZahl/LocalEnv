@@ -60,8 +60,8 @@
         await file.OpenReadStream().CopyToAsync(fs);
         fs.Close();
 
-        agent.BinaryPath = Game.Folder + agent.Id + "/binary/";
-        Directory.CreateDirectory(Path.GetDirectoryName(agent.BinaryPath));
+        agent.BinaryPath = Game.Folder + agent.Id + "/binary/project.dll";
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetDirectoryName(agent.BinaryPath)));
         await agent.Compile();
 
         context.SaveChanges();

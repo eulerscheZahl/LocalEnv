@@ -16,5 +16,6 @@ namespace LocalEnv.Model
         public DbSet<Agent> Agents { get; set; }
         public DbSet<TestcaseResult> TestcaseResults { get; set; }
         public DbSet<SeedInfo> SeedInfos { get; set; }
+        public DbSet<ParameterValue> ParameterValues { get; set; }
     }
 }

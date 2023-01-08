@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace LocalEnv.Model
@@ -43,6 +46,38 @@ namespace LocalEnv.Model
                 return 1;
             }
             return seedInfo.BestScore / score;
+        }
+
+        public async Task GenerateSeedInfo(int seed)
+        {
+            SeedInfo info = SeedInfos.FirstOrDefault(s => s.Seed == seed);
+            if (info != null) return;
+
+            info = new SeedInfo
+            {
+                Seed = seed,
+                ParameterValues = Parameters.Select(p => new ParameterValue { Parameter = p }).ToList()
+            };
+
+            Process process = new Process();
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.FileName = "java";
+            process.StartInfo.Arguments = $"-jar {TesterPath} -debug -novis -seed {seed}";
+            process.Start();
+            string stdOut = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            string[] lines = stdOut.Split("\r\n".ToCharArray());
+            foreach (string line in lines)
+            {
+                Match match = Regex.Match(line, @"(?<var>\w+) = (?<number>\d+(\.\d+)?)");
+                if (!match.Success) continue;
+                string variable = match.Groups["var"].Value;
+                string number = match.Groups["number"].Value;
+                ParameterValue value = info.ParameterValues.FirstOrDefault(v => v.Parameter.InternalName == variable);
+                if (value != null) value.Value = double.Parse(number, CultureInfo.InvariantCulture);
+            }
+            SeedInfos.Add(info);
         }
     }
 }
