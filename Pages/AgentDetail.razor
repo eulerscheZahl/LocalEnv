@@ -1,0 +1,94 @@
+@page "/agent/{Id:int}"
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IDialogService DialogService
+
+<h1>@game.DisplayTitle - @agent.Name</h1>
+
+<MudCard>
+    <MudCardActions>
+        <MudButton Variant="Variant.Filled" Href=@($"/game/{game.Id}")>Back to game</MudButton>
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Download"
+            Color="Color.Primary">Download</MudButton>
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
+            Color="Color.Primary">Export</MudButton>
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error">
+            Delete</MudButton>
+    </MudCardActions>
+</MudCard>
+
+<h3>Scores per seed</h3>
+<MudTable Dense="true" Striped="true" Hover="true" SortLabel="Sort By" Items="@agent.TestcaseResults">
+    <HeaderContent>
+        <MudTh>
+            <MudTableSortLabel InitialDirection="SortDirection.Ascending"
+                SortBy="new Func<TestcaseResult, object>(x=>x.Seed)">Seed</MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>RelativeScore(x.Seed,x.Score))">Relative
+                score</MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Score)">Absolute score</MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Time)">Time</MudTableSortLabel>
+        </MudTh>
+        @foreach (Parameter param in game.Parameters)
+        {
+            <MudTh>
+                <MudTableSortLabel
+                SortBy="new Func<TestcaseResult, object>(x=>seedInfos[x.Seed].ParameterValues.First(v=>v.Parameter.Id==param.Id).Value)">
+                    @param.DisplayName</MudTableSortLabel>
+            </MudTh>
+        }
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Seed">@context.Seed</MudTd>
+        <MudTd DataLabel="RelativeScore">@FormatNumber(RelativeScore(context.Seed, context.Score))</MudTd>
+        <MudTd DataLabel="AbsoluteScore">@context.Score</MudTd>
+        <MudTd DataLabel="Time">@context.Time ms</MudTd>
+        @foreach (Parameter param in game.Parameters)
+        {
+            <MudTd DataLabel="@param.InternalName">
+                @FormatNumber(seedInfos[context.Seed].ParameterValues.First(v=>v.Parameter.Id==param.Id).Value)
+            </MudTd>
+        }
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Game game;
+    private Agent agent;
+    private Dictionary<int, SeedInfo> seedInfos = new();
+
+    protected override void OnParametersSet()
+    {
+        using var context = DbFactory.CreateDbContext();
+        game = context.Games
+        .Include(g => g.Parameters)
+        .ThenInclude(p => p.Ranges)
+        .Include(g => g.SeedInfos)
+        .ThenInclude(s => s.ParameterValues)
+        .ThenInclude(p => p.Parameter)
+        .Include(g => g.Agents)
+        .ThenInclude(a => a.TestcaseResults)
+        .AsSplitQuery()
+        .First(g => g.Agents.Any(a => a.Id == Id));
+        agent = game.Agents.First(a => a.Id == Id);
+        game.InitScores();
+        seedInfos = game.SeedInfos.ToDictionary(s => s.Seed, s => s);
+    }
+
+    private double RelativeScore(int seed, double absoluteScore)
+    => game.ComputeRelativeScore(seedInfos[seed], absoluteScore);
+
+    private string FormatNumber(double number)
+    {
+        if (number == (int)number) return number.ToString();
+        return number.ToString("0.000", CultureInfo.InvariantCulture);
+    }
+}

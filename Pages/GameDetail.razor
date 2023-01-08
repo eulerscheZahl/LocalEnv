@@ -53,7 +53,6 @@
             {
                 <MudTh colspan="@p.Ranges.Count">@p.DisplayName</MudTh>
             }
-            <MudTh></MudTh>
         </MudTHeadRow>
         <MudTHeadRow>
             <MudTh>Agent Name</MudTh>
@@ -65,13 +64,12 @@
                     <MudTh>@range [@range.Testcases]</MudTh>
                 }
             }
-            <MudTh>Action</MudTh>
         </MudTHeadRow>
     </HeaderContent>
     <RowTemplate Context="agent">
         <MudTd><MudLink Target="_blank" Href=@($"/agent/{agent.Id}")>@agent.Name</MudLink></MudTd>
         <MudTd>
-            @((MarkupString)FormatNumberRank(agent.Score, game.Agents.Select(a => a.Score)))
+            @FormatNumberRank(agent.Score, game.Agents.Select(a => a.Score))
             @if (agent.Progress(game.SeedCount) != 100)
             {
                 <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@agent.Progress(game.SeedCount)" />
@@ -81,13 +79,9 @@
         {
             @foreach (ParameterRange range in p.Ranges)
             {
-                <MudTd>@((MarkupString)FormatNumberRank(agent.RangeScore(range), game.Agents.Select(a => a.RangeScore(range))))</MudTd>
+                <MudTd>@FormatNumberRank(agent.RangeScore(range), game.Agents.Select(a => a.RangeScore(range)))</MudTd>
             }
         }
-        <MudTd>
-            <MudButton Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Download">
-                Download</MudButton>
-        </MudTd>
     </RowTemplate>
 </MudTable>
 
@@ -201,12 +195,12 @@
         }).Start();
     }
 
-    private string FormatNumberRank(double score, IEnumerable<double> allScores)
+    private MarkupString FormatNumberRank(double score, IEnumerable<double> allScores)
     {
         int rank = 1 + allScores.Count(s => s > score);
-        string result = score.ToString("0.000") + " [" + rank + "]";
-        if (rank == 1) return "<b>" + result + "</b>";
-        return result;
+        string result = score.ToString("0.000", CultureInfo.InvariantCulture) + " [" + rank + "]";
+        if (rank == 1) return (MarkupString)("<b>" + result + "</b>");
+        return (MarkupString)result;
     }
 
     private void Stop() => game.Running = false;
