@@ -8,5 +8,6 @@ namespace LocalEnv.Model
         public int Seed { get; set; }
         public List<ParameterValue> ParameterValues { get; set; }
         [NotMapped] public double BestScore { get; set; }
+        [NotMapped] public List<ParameterRange> Ranges { get; set; } = new();
     }
 }

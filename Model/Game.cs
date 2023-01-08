@@ -82,7 +82,18 @@ namespace LocalEnv.Model
 
         public void InitScores()
         {
+            foreach (SeedInfo info in SeedInfos)
+            {
+                foreach (Parameter param in Parameters)
+                {
+                    ParameterValue value = info.ParameterValues.First(v => v.Parameter.Id == param.Id);
+                    ParameterRange range = param.Ranges.First(r => r.IsMatch(value));
+                    info.Ranges.Add(range);
+                    range.Testcases++;
+                }
+            }
             Dictionary<int, SeedInfo> infos = SeedInfos.ToDictionary(s => s.Seed, s => s);
+
             // find best absolute scores
             foreach (Agent agent in Agents)
             {

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace LocalEnv.Model
 {
     public class ParameterRange
@@ -5,6 +7,7 @@ namespace LocalEnv.Model
         public int Id { get; set; }
         public double MinValue { get; set; }
         public double MaxValue { get; set; }
+        [NotMapped] public int Testcases { get; set; }
 
         public override string ToString() => MinValue == MaxValue ? MinValue.ToString() : MinValue + "-" + MaxValue;
 
@@ -18,5 +21,8 @@ namespace LocalEnv.Model
             };
             return range;
         }
+
+        public bool IsMatch(ParameterValue value) => value.Value >= MinValue && value.Value <= MaxValue;
+
     }
 }

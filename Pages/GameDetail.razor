@@ -36,7 +36,7 @@
     </MudButton>
 </div>
 
-<MudTable Hover="true" Striped="true" Bordered="true" Items="@game.Agents" CustomHeader="true"
+<MudTable Hover="true" Striped="true" Bordered="true" Dense="true" Items="@game.Agents" CustomHeader="true"
     HeaderClass="table-head-bordered">
     <ToolBarContent>
         <MudText Typo="Typo.h6" Class="mr-5">Agents</MudText>
@@ -57,21 +57,21 @@
         </MudTHeadRow>
         <MudTHeadRow>
             <MudTh>Agent Name</MudTh>
-            <MudTh>Score</MudTh>
+            <MudTh>Score [@game.SeedCount]</MudTh>
             @foreach (Parameter p in game.Parameters)
             {
                 @foreach (ParameterRange range in p.Ranges)
                 {
-                    <MudTh>@range</MudTh>
+                    <MudTh>@range [@range.Testcases]</MudTh>
                 }
             }
             <MudTh>Action</MudTh>
         </MudTHeadRow>
     </HeaderContent>
     <RowTemplate Context="agent">
-        <MudTd>@agent.Name</MudTd>
+        <MudTd><MudLink Target="_blank" Href=@($"/agent/{agent.Id}")>@agent.Name</MudLink></MudTd>
         <MudTd>
-            @FormatNumber(agent.Score)
+            @((MarkupString)FormatNumberRank(agent.Score, game.Agents.Select(a => a.Score)))
             @if (agent.Progress(game.SeedCount) != 100)
             {
                 <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@agent.Progress(game.SeedCount)" />
@@ -81,7 +81,7 @@
         {
             @foreach (ParameterRange range in p.Ranges)
             {
-                <MudTd></MudTd>
+                <MudTd>@((MarkupString)FormatNumberRank(agent.RangeScore(range), game.Agents.Select(a => a.RangeScore(range))))</MudTd>
             }
         }
         <MudTd>
@@ -177,7 +177,7 @@
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
                 process.StartInfo.FileName = "java";
-                process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -novis -seed {info.Seed} -exec \"{agent.ExecuteCommand}\"";
+                process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{agent.ExecuteCommand}\"";
                 process.Start();
                 string stdOut = process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
@@ -185,7 +185,7 @@
 
                 Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
                 double score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
-                match = Regex.Match(line, @"Time = (?<number>\d+)");
+                match = Regex.Match(line, @"RunTime = (?<number>\d+)");
                 int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
                 TestcaseResult result = new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
                 agent.AddTestcaseResult(info, game, result);
@@ -201,7 +201,13 @@
         }).Start();
     }
 
-    private string FormatNumber(double number) => number.ToString("0.000");
+    private string FormatNumberRank(double score, IEnumerable<double> allScores)
+    {
+        int rank = 1 + allScores.Count(s => s > score);
+        string result = score.ToString("0.000") + " [" + rank + "]";
+        if (rank == 1) return "<b>" + result + "</b>";
+        return result;
+    }
 
     private void Stop() => game.Running = false;
     private void Start() {
