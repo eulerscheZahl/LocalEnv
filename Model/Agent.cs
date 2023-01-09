@@ -30,6 +30,16 @@ namespace LocalEnv.Model
         private Dictionary<ParameterRange, double> totalScoreByRange = new();
         private Dictionary<ParameterRange, int> totalCasesByRange = new();
 
+        public string CodeExtension() {
+            return Language switch
+            {
+                "C#" => ".cs",
+                "C++" => ".cpp",
+                "Java" => ".java",
+                _ => ".py"
+            };
+        }
+
         public async Task Compile()
         {
             string tmpDir = Path.GetTempPath() + Guid.NewGuid() + "/";

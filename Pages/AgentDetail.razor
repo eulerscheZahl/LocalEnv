@@ -1,6 +1,8 @@
 @page "/agent/{Id:int}"
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IDialogService DialogService
+@inject IJSRuntime JS
+@inject NavigationManager navigationManager
 
 <h1>@game.DisplayTitle - @agent.Name</h1>
 
@@ -8,11 +10,25 @@
     <MudCardActions>
         <MudButton Variant="Variant.Filled" Href=@($"/game/{game.Id}")>Back to game</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Download"
-            Color="Color.Primary">Download</MudButton>
+            Color="Color.Primary" OnClick="Download">Download</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
-            Color="Color.Primary">Export</MudButton>
-        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error">
+            Color="Color.Primary" OnClick="Export">Export</MudButton>
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error"
+            OnClick="()=>deleteVisible=true">
             Delete</MudButton>
+        <MudDialog @bind-IsVisible="deleteVisible">
+            <DialogContent>
+                <p>Do you really want to delete @agent.Name?</p>
+            </DialogContent>
+            <DialogActions>
+                <MudButton Variant="Variant.Filled" OnClick="()=>deleteVisible=false" Class="mr-2">
+                    Cancel
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Delete"
+                    Color="Color.Error" OnClick="Delete">
+                    Delete</MudButton>
+            </DialogActions>
+        </MudDialog>
     </MudCardActions>
 </MudCard>
 
@@ -64,6 +80,7 @@
     private Game game;
     private Agent agent;
     private Dictionary<int, SeedInfo> seedInfos = new();
+    private bool deleteVisible;
 
     protected override void OnParametersSet()
     {
@@ -90,5 +107,46 @@
     {
         if (number == (int)number) return number.ToString();
         return number.ToString("0.000", CultureInfo.InvariantCulture);
+    }
+
+    private async Task Download()
+    {
+        FileStream fileStream = new FileStream(agent.CodePath, FileMode.Open);
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", Path.GetFileName(agent.CodePath), streamRef);
+    }
+
+    private async Task Export()
+    {
+        string code = await agent.BundleCode();
+        using (var memoryStream = new MemoryStream())
+        {
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+            {
+                var entry = archive.CreateEntry(game.ExportTitle + agent.CodeExtension());
+                using (var entryStream = entry.Open())
+                using (var streamWriter = new StreamWriter(entryStream))
+                {
+                    streamWriter.Write(code);
+                }
+            }
+
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using var streamRef = new DotNetStreamReference(stream: memoryStream);
+            await JS.InvokeVoidAsync("downloadFileFromStream", game.ExportTitle + ".zip", streamRef);
+        }
+    }
+
+    private void Delete()
+    {
+        deleteVisible = false;
+        using var context = DbFactory.CreateDbContext();
+        Agent agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == Id);
+        Directory.Delete(Path.GetDirectoryName(agent.CodePath), true);
+        context.Agents.Remove(agent);
+        context.TestcaseResults.RemoveRange(agent.TestcaseResults);
+        context.Games.Include(g => g.Agents).First(g => g.Id == game.Id).Agents.RemoveAll(a => a.Id == agent.Id);
+        context.SaveChanges();
+        navigationManager.NavigateTo("/game/" + game.Id);
     }
 }
