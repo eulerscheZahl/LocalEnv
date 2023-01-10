@@ -57,7 +57,7 @@
         agent.CodePath = Game.Folder + agent.Id + "/" + file.Name;
         Directory.CreateDirectory(Path.GetDirectoryName(agent.CodePath));
         using FileStream fs = new(agent.CodePath, FileMode.Create);
-        await file.OpenReadStream().CopyToAsync(fs);
+        await file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024).CopyToAsync(fs);
         fs.Close();
 
         agent.BinaryPath = Game.Folder + agent.Id + "/binary/project.dll";

@@ -152,7 +152,7 @@
             game.TesterPath = game.Folder + file.Name;
             Directory.CreateDirectory(game.Folder);
             using FileStream fs = new(game.TesterPath, FileMode.Create);
-            await file.OpenReadStream().CopyToAsync(fs);
+            await file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024).CopyToAsync(fs);
             fs.Close();
             context.SaveChanges();
         }
