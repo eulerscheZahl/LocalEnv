@@ -95,6 +95,11 @@ namespace LocalEnv.Model
             Dictionary<int, SeedInfo> infos = SeedInfos.ToDictionary(s => s.Seed, s => s);
 
             // find best absolute scores
+            if (Minimize)
+            {
+                foreach (SeedInfo info in SeedInfos) info.BestScore = double.MaxValue;
+            }
+            
             foreach (Agent agent in Agents)
             {
                 foreach (TestcaseResult result in agent.TestcaseResults)
