@@ -88,9 +88,13 @@
 @code {
     [Parameter] public int Id { get; set; }
     private Game game;
-    private int maxThreads = 4;
+    private static int runningCount = 0;
+    private static int maxThreads = 4;
+    private const int STORE_LIMIT = 50;
     private int MaxThreads { get => maxThreads; set { maxThreads = value; PlayQueue(); } }
-    private PriorityQueue<(Agent agent, SeedInfo seedInfo), int> toRun = new();
+    private static PriorityQueue<(Agent agent, SeedInfo seedInfo), int> toRun = new();
+    private static List<(Agent agent, TestcaseResult result)> toStore = new();
+    private static HashSet<string> toRunSet = new();
 
     protected override void OnParametersSet()
     {
@@ -107,6 +111,11 @@
         .First(g => g.Id == Id);
         game.Agents = game.Agents.OrderByDescending(a => a.Id).ToList();
         game.InitScores();
+        foreach (var store in toStore)
+        {
+            SeedInfo info = game.SeedInfos.First(s => s.Seed == store.result.Seed);
+            InformResult(store.agent, info, store.result);
+        }
 
         foreach (Agent agent in game.Agents) PopulateQueue(agent);
         StateHasChanged();
@@ -135,11 +144,13 @@
         Dictionary<int, TestcaseResult> existing = agent.TestcaseResults.ToDictionary(t => t.Seed, t => t);
         foreach (SeedInfo seedInfo in game.SeedInfos)
         {
-            if (!existing.ContainsKey(seedInfo.Seed)) toRun.Enqueue((agent, seedInfo), seedInfo.Seed);
+            if (existing.ContainsKey(seedInfo.Seed)) continue;
+            if (toRunSet.Contains(agent.Id + ":" + seedInfo.Seed)) continue;
+            toRunSet.Add(agent.Id + ":" + seedInfo.Seed);
+            toRun.Enqueue((agent, seedInfo), seedInfo.Seed);
         }
     }
 
-    private int runningCount = 0;
     private void PlayQueue()
     {
         while (toRun.Count > 0 && runningCount < MaxThreads)
@@ -182,17 +193,32 @@
                 match = Regex.Match(line, @"RunTime = (?<number>\d+)");
                 int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
                 TestcaseResult result = new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
-                agent.AddTestcaseResult(info, game, result);
                 lock (toRun)
                 {
-                    using var context = DbFactory.CreateDbContext();
-                    agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
-                    agent.AddTestcaseResult(info, game, result);
-                    context.SaveChanges();
+                    toStore.Add((agent, result));
+                    if (toStore.Count >= STORE_LIMIT || toRun.Count == 0) {
+                        using var context = DbFactory.CreateDbContext();
+                        foreach (var group in toStore.GroupBy(s => s.agent.Id))
+                        {
+                            agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
+                            agent.TestcaseResults.AddRange(group.Select(g => g.result));
+                        }
+                        context.SaveChanges();
+                        toRunSet.Clear();
+                        toStore.Clear();
+                    }
                 }
-                await InvokeAsync(StateHasChanged);
+                await InvokeAsync(() => InformResult(agent, info, result));
             }
         }).Start();
+    }
+
+    private void InformResult(Agent agent, SeedInfo info, TestcaseResult result)
+    {
+        agent = game.Agents.FirstOrDefault(a => a.Id == agent.Id);
+        if (agent == null) return;
+        agent.AddTestcaseResult(info, game, result);
+        StateHasChanged();
     }
 
     private MarkupString FormatNumberRank(double score, IEnumerable<double> allScores)
