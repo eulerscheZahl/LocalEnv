@@ -34,7 +34,7 @@
 
 @if (game.Parameters.Count > 1)
 {
-    <h2>Diagram</h2>
+    <h2 class="mt-3">Diagram</h2>
     <MudGrid>
         <MudItem xs="3" sm="2">
             <MudSelect @bind-Value="XParam" Label="x Parameter" Variant="Variant.Outlined">
@@ -59,11 +59,11 @@
         <MudTh></MudTh>
         @foreach (ParameterRange range in XParam.Ranges)
         {
-            <MudTh><b>@range</b></MudTh>
+            <MudTh>@range</MudTh>
         }
     </HeaderContent>
     <RowTemplate>
-        <MudTh>@context[0]</MudTh>
+        <MudTd><b>@context[0]</b></MudTd>
         @for (int i = 1; i < context.Count; i++) {
             int tmp = i;
             <MudTd>@context[tmp]</MudTd>
@@ -72,7 +72,7 @@
 </MudTable>
 }
 
-<h2>Testcase details</h2>
+<h2 class="mt-3">Testcase details</h2>
 <MudTable Dense="true" Striped="true" Hover="true" SortLabel="Sort By" Items="@agent.TestcaseResults">
     <HeaderContent>
         <MudTh>
@@ -127,6 +127,7 @@
         {
             xParam = value;
             if (xParam == YParam) YParam = game.Parameters.FirstOrDefault(p => p != xParam);
+            else UpdateDetails();
         }
     }
     private Parameter YParam
@@ -182,9 +183,14 @@
             foreach (ParameterRange x in XParam.Ranges)
             {
                 List<SeedInfo> cellSeeds = infos.Where(s => s.Ranges.Contains(x)).ToList();
+                HashSet<int> seeds = cellSeeds.Select(s => s.Seed).ToHashSet();
                 List<double> scores = cellSeeds.Select(s => RelativeScore(s.Seed, agentScores[s.Seed])).ToList();
-                if (scores.Count > 0) row.Add(FormatNumber(100 * scores.Average()));
-                else row.Add("");
+                if (scores.Count > 0) {
+                    double sum = scores.Sum();
+                    List<double> otherSums = game.Agents.Select(a => a.TestcaseResults.Where(r => seeds.Contains(r.Seed)).Sum(r => RelativeScore(r.Seed, r.Score))).ToList();
+                    row.Add(FormatNumber(100 * scores.Average()) + $" [{1 + otherSums.Count(s => s > sum)}]");
+                }
+                else row.Add("-");
             }
             detailsTable.Add(row);
         }
