@@ -32,7 +32,47 @@
     </MudCardActions>
 </MudCard>
 
-<h3>Scores per seed</h3>
+@if (game.Parameters.Count > 1)
+{
+    <h2>Diagram</h2>
+    <MudGrid>
+        <MudItem xs="3" sm="2">
+            <MudSelect @bind-Value="XParam" Label="x Parameter" Variant="Variant.Outlined">
+                @foreach (Parameter param in game.Parameters)
+                {
+                <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
+                }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="3" sm="2">
+        <MudSelect @bind-Value="YParam" Label="y Parameter" Variant="Variant.Outlined">
+            @foreach (Parameter param in game.Parameters.Where(p => p != xParam))
+                {
+                <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
+                }
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="@detailsTable">
+    <HeaderContent>
+        <MudTh></MudTh>
+        @foreach (ParameterRange range in XParam.Ranges)
+        {
+            <MudTh><b>@range</b></MudTh>
+        }
+    </HeaderContent>
+    <RowTemplate>
+        <MudTh>@context[0]</MudTh>
+        @for (int i = 1; i < context.Count; i++) {
+            int tmp = i;
+            <MudTd>@context[tmp]</MudTd>
+        }
+    </RowTemplate>
+</MudTable>
+}
+
+<h2>Testcase details</h2>
 <MudTable Dense="true" Striped="true" Hover="true" SortLabel="Sort By" Items="@agent.TestcaseResults">
     <HeaderContent>
         <MudTh>
@@ -79,8 +119,28 @@
     [Parameter] public int Id { get; set; }
     private Game game;
     private Agent agent;
+    private Parameter xParam, yParam;
+    private Parameter XParam
+    {
+        get => xParam;
+        set
+        {
+            xParam = value;
+            if (xParam == YParam) YParam = game.Parameters.FirstOrDefault(p => p != xParam);
+        }
+    }
+    private Parameter YParam
+    {
+        get => yParam;
+        set
+        {
+            yParam = value;
+            UpdateDetails();
+        }
+    }
     private Dictionary<int, SeedInfo> seedInfos = new();
     private bool deleteVisible;
+    private List<List<string>> detailsTable = new();
 
     protected override void OnParametersSet()
     {
@@ -98,6 +158,8 @@
         agent = game.Agents.First(a => a.Id == Id);
         game.InitScores();
         seedInfos = game.SeedInfos.ToDictionary(s => s.Seed, s => s);
+        xParam = game.Parameters.FirstOrDefault();
+        YParam = game.Parameters.FirstOrDefault(p => p != xParam);
     }
 
     private double RelativeScore(int seed, double absoluteScore)
@@ -107,6 +169,25 @@
     {
         if (number == (int)number) return number.ToString();
         return number.ToString("0.000", CultureInfo.InvariantCulture);
+    }
+
+    private void UpdateDetails()
+    {
+        detailsTable.Clear();
+        Dictionary<int, double> agentScores = agent.TestcaseResults.ToDictionary(r => r.Seed, r => r.Score);
+        foreach (ParameterRange y in YParam.Ranges)
+        {
+            List<string> row = new() { y.ToString() };
+            List<SeedInfo> infos = game.SeedInfos.Where(s => agentScores.ContainsKey(s.Seed) && s.Ranges.Contains(y)).ToList();
+            foreach (ParameterRange x in XParam.Ranges)
+            {
+                List<SeedInfo> cellSeeds = infos.Where(s => s.Ranges.Contains(x)).ToList();
+                List<double> scores = cellSeeds.Select(s => RelativeScore(s.Seed, agentScores[s.Seed])).ToList();
+                if (scores.Count > 0) row.Add(FormatNumber(100 * scores.Average()));
+                else row.Add("");
+            }
+            detailsTable.Add(row);
+        }
     }
 
     private async Task Download()
