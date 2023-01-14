@@ -27,11 +27,21 @@
                     </div>
                 </MudCardContent>
             </MudCard>
-        </EditForm>
+        </EditForm>   
+        @if (compiling)
+        {
+            <MudAlert Severity="Severity.Info">
+                <MudProgressCircular Class="mr-2" Color="Color.Primary" Size="Size.Small" Indeterminate="true"/>
+                compiling
+            </MudAlert>
+        }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+        @if (!compiling)
+        {
+            <MudButton Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -40,6 +50,7 @@
     [Parameter] public Game Game { get; set; }
     [Parameter] public Agent Agent { get; set; }
 
+    private bool compiling;
     private IBrowserFile file;
     private void UploadAgent(IBrowserFile toUpload)
     {
@@ -62,6 +73,8 @@
 
         agent.BinaryPath = Game.Folder + agent.Id + "/binary/project.dll";
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetDirectoryName(agent.BinaryPath)));
+        compiling = true;
+        StateHasChanged();
         await agent.Compile();
 
         context.SaveChanges();

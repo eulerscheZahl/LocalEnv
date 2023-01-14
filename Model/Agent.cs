@@ -23,7 +23,6 @@ namespace LocalEnv.Model
             return 100 * totalScoreByRange[range] / totalCasesByRange[range];
         }
 
-
         private Dictionary<int, double> relativeScorePerSeed = new();
         private Dictionary<int, double> absoluteScorePerSeed = new();
         private double totalScore = 0;
