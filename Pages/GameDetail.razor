@@ -200,11 +200,11 @@
                         using var context = DbFactory.CreateDbContext();
                         foreach (var group in toStore.GroupBy(s => s.agent.Id))
                         {
-                            agent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == agent.Id);
-                            agent.TestcaseResults.AddRange(group.Select(g => g.result));
+                            Agent dbAgent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == group.Key);
+                            dbAgent.TestcaseResults.AddRange(group.Select(g => g.result));
+                            foreach (TestcaseResult t in group.Select(x => x.result)) toRunSet.Remove(dbAgent.Id + ":" + t.Seed);
                         }
                         context.SaveChanges();
-                        toRunSet.Clear();
                         toStore.Clear();
                     }
                 }
