@@ -85,7 +85,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Game game = new Game { Maximize = true };
+    private Game game = new Game { Maximize = true, Parameters = new() };
     private bool generatingSeedInfo = false;
     private int seedProgress = 0;
 
