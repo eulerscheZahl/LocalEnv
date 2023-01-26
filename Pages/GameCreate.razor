@@ -23,37 +23,37 @@
                     </ButtonTemplate>
                 </MudFileUpload>
                 <MudText>@(file?.Name ?? Path.GetFileName(game.TesterPath))</MudText>
-            </div>
-            <MudCheckBox T="bool" Label="Maximize" Class="mt-3" @bind-Checked="game.Maximize" />
-            <MudTextField Label="Seed Start" Class="mt-3" @bind-Value="game.SeedStart" For="@(() => game.SeedStart)" />
-            <MudTextField Label="Seed Count" Class="mt-3" @bind-Value="game.SeedCount" For="@(() => game.SeedCount)" />
-            <MudTable Class="mt-3" Hover="true" Striped="true" Items="@game.Parameters">
-                <ToolBarContent>
-                    <MudText Typo="Typo.h6" Class="mr-5">Parameters</MudText>
-                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                </div>
+                <MudCheckBox T="bool" Label="Maximize" Class="mt-3" @bind-Checked="game.Maximize" />
+                <MudTextField Label="Seed Start" Class="mt-3" @bind-Value="game.SeedStart" For="@(() => game.SeedStart)" />
+                <MudTextField Label="Seed Count" Class="mt-3" @bind-Value="game.SeedCount" For="@(() => game.SeedCount)" />
+                <MudTable Class="mt-3" Hover="true" Striped="true" Items="@game.Parameters">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6" Class="mr-5">Parameters</MudText>
+                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                         OnClick="()=>EditParameter(new Parameter())">Add parameter</MudButton>
-                </ToolBarContent>
-                <HeaderContent>
-                    <MudTh>Internal name</MudTh>
-                    <MudTh>Display name</MudTh>
-                    <MudTh>Ranges</MudTh>
-                    <MudTh>Action</MudTh>
-                </HeaderContent>
-                <RowTemplate Context="parameter">
-                    <MudTd>@parameter.InternalName</MudTd>
-                    <MudTd>@parameter.DisplayName</MudTd>
-                    <MudTd>@(string.Join(", ", parameter.Ranges))</MudTd>
-                    <MudTd>
-                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Class="mr-2"
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Internal name</MudTh>
+                        <MudTh>Display name</MudTh>
+                        <MudTh>Ranges</MudTh>
+                        <MudTh>Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="parameter">
+                        <MudTd>@parameter.InternalName</MudTd>
+                        <MudTd>@parameter.DisplayName</MudTd>
+                        <MudTd>@(string.Join(", ", parameter.Ranges))</MudTd>
+                        <MudTd>
+                            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Class="mr-2"
                             Color="Color.Primary" OnClick="()=>EditParameter(parameter)">Edit</MudButton>
-                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete"
+                            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete"
                             Color="Color.Error" OnClick="()=>DeleteParameter(parameter)">Delete</MudButton>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudCardContent>
-        <MudCardActions>
-            @if (generatingSeedInfo)
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+            <MudCardActions>
+                @if (generatingSeedInfo)
             {
                 <MudAlert Severity="Severity.Info">
                     <MudProgressLinear Color="Color.Primary" Value="@seedProgress" Class="my-7" />
@@ -85,7 +85,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Game game = new Game { Maximize = true, Parameters = new() };
+    private Game game = new Game { Maximize = true, Parameters = new(), SeedInfos = new() };
     private bool generatingSeedInfo = false;
     private int seedProgress = 0;
 
