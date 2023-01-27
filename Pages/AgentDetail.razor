@@ -13,7 +13,8 @@
             Color="Color.Primary" OnClick="Download">Download</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
             Color="Color.Primary" OnClick="Export">Export</MudButton>
-        <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff" StartIcon="@Icons.Material.Filled.Compare">
+        <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff"
+            StartIcon="@Icons.Material.Filled.Compare">
             @foreach (Agent other in game.Agents)
             {
                 if (other == agent) continue;
@@ -47,36 +48,37 @@
             <MudSelect @bind-Value="XParam" Label="x Parameter" Variant="Variant.Outlined">
                 @foreach (Parameter param in game.Parameters)
                 {
-                <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
+                    <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
                 }
-        </MudSelect>
-    </MudItem>
-    <MudItem xs="3" sm="2">
-        <MudSelect @bind-Value="YParam" Label="y Parameter" Variant="Variant.Outlined">
-            @foreach (Parameter param in game.Parameters.Where(p => p != xParam))
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="3" sm="2">
+            <MudSelect @bind-Value="YParam" Label="y Parameter" Variant="Variant.Outlined">
+                @foreach (Parameter param in game.Parameters.Where(p => p != xParam))
                 {
-                <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
+                    <MudSelectItem Value="@param">@param.DisplayName</MudSelectItem>
                 }
-        </MudSelect>
-    </MudItem>
-</MudGrid>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
 
-<MudTable Items="@detailsTable">
-    <HeaderContent>
-        <MudTh></MudTh>
-        @foreach (ParameterRange range in XParam.Ranges)
-        {
-            <MudTh>@range</MudTh>
-        }
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd><b>@context[0]</b></MudTd>
-        @for (int i = 1; i < context.Count; i++) {
-            int tmp = i;
-            <MudTd>@context[tmp]</MudTd>
-        }
-    </RowTemplate>
-</MudTable>
+    <MudTable Items="@detailsTable">
+        <HeaderContent>
+            <MudTh></MudTh>
+            @foreach (ParameterRange range in XParam.Ranges)
+            {
+                <MudTh>@range</MudTh>
+            }
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><b>@context[0]</b></MudTd>
+            @for (int i = 1; i < context.Count; i++)
+            {
+                int tmp = i;
+                <MudTd>@context[tmp]</MudTd>
+            }
+        </RowTemplate>
+    </MudTable>
 }
 
 <h2 class="mt-3">Testcase details</h2>
@@ -102,7 +104,13 @@
         </MudTh>
         @foreach (Agent a in additionalAgents)
         {
-            <MudTh>@a.Name <MudIconButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="ml-2" Icon="@Icons.Material.Filled.Delete" OnClick="()=>additionalAgents.Remove(a)"></MudIconButton></MudTh>
+            <MudTh>@a.Name <MudIconButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="ml-2"
+                Icon="@Icons.Material.Filled.Delete" OnClick="()=>additionalAgents.Remove(a)"></MudIconButton>
+            </MudTh>
+        }
+        @foreach (string info in additionalInfo)
+        {
+            <MudTh>@info</MudTh>
         }
         <MudTh>
             <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Time)">Time</MudTableSortLabel>
@@ -122,7 +130,11 @@
         <MudTd DataLabel="AbsoluteScore">@context.Score</MudTd>
         @foreach (Agent a in additionalAgents)
         {
-            <MudTh>@(a.TestcaseResults.FirstOrDefault(r => r.Seed==context.Seed)?.Score.ToString() ?? "-")</MudTh>
+            <MudTh>@(a.TestcaseResults.FirstOrDefault(r => r.Seed == context.Seed)?.Score.ToString() ?? "-")</MudTh>
+        }
+        @foreach (string info in additionalInfo)
+        {
+            <MudTh>@(context.AdditionalValues().ContainsKey(info) ? context.AdditionalValues()[info] : "-")</MudTh>
         }
         <MudTd DataLabel="Time">@context.Time ms</MudTd>
         @foreach (Parameter param in game.Parameters)
@@ -142,6 +154,7 @@
     private Game game;
     private Agent agent;
     private List<Agent> additionalAgents = new();
+    private List<string> additionalInfo = new();
     private Parameter xParam, yParam;
     private Parameter XParam
     {
@@ -184,6 +197,7 @@
         seedInfos = game.SeedInfos.ToDictionary(s => s.Seed, s => s);
         xParam = game.Parameters.FirstOrDefault();
         YParam = game.Parameters.FirstOrDefault(p => p != xParam);
+        additionalInfo = agent.TestcaseResults.SelectMany(r => r.AdditionalValues().Keys).Distinct().ToList();
     }
 
     private double RelativeScore(int seed, double absoluteScore)
@@ -208,9 +222,11 @@
                 List<SeedInfo> cellSeeds = infos.Where(s => s.Ranges.Contains(x)).ToList();
                 HashSet<int> seeds = cellSeeds.Select(s => s.Seed).ToHashSet();
                 List<double> scores = cellSeeds.Select(s => RelativeScore(s.Seed, agentScores[s.Seed])).ToList();
-                if (scores.Count > 0) {
+                if (scores.Count > 0)
+                {
                     double sum = scores.Sum();
-                    List<double> otherSums = game.Agents.Select(a => a.TestcaseResults.Where(r => seeds.Contains(r.Seed)).Sum(r => RelativeScore(r.Seed, r.Score))).ToList();
+                    List<double> otherSums = game.Agents.Select(a => a.TestcaseResults.Where(r => seeds.Contains(r.Seed)).Sum(r =>
+                    RelativeScore(r.Seed, r.Score))).ToList();
                     row.Add(FormatNumber(100 * scores.Average()) + $" [{1 + otherSums.Count(s => s > sum)}]");
                 }
                 else row.Add("-");
@@ -260,7 +276,8 @@
         navigationManager.NavigateTo("/game/" + game.Id);
     }
 
-    private async Task Diff(Agent current, Agent other) {
+    private async Task Diff(Agent current, Agent other)
+    {
         await JS.InvokeAsync<object>("open", $"agent-diff/?prev={other.Id}&current={agent.Id}", "_blank");
     }
 }

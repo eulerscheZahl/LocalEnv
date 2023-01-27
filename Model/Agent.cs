@@ -92,13 +92,18 @@ namespace LocalEnv.Model
             process.Start();
             string stdOut = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
-            string line = stdOut.Trim();
-
-            Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
-            double score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
-            match = Regex.Match(line, @"RunTime = (?<number>\d+)");
-            int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
-            return new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
+            string testcaseInfo = null;
+            int time = 0;
+            double score = -1;
+            foreach (string line in stdOut.Split("\r\n".ToCharArray()))
+            {
+                if (line.StartsWith("TESTCASE_INFO")) testcaseInfo = line.Replace("TESTCASE_INFO", "").Trim();
+                Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
+                if (match.Success) score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
+                match = Regex.Match(line, @"RunTime = (?<number>\d+)");
+                if (match.Success) time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
+            }
+            return new TestcaseResult { Seed = info.Seed, Score = score, Time = time, AdditionalOutput = testcaseInfo };
         }
 
         public void UpdateSeedScore(SeedInfo seedInfo, Game game)
