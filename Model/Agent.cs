@@ -16,7 +16,7 @@ namespace LocalEnv.Model
         [NotMapped] public bool Running { get; set; } = true;
         public string ExecuteCommand => "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
         public double Progress(int testcases) => 100.0 * TestcaseResults.Count / testcases;
-        public double Score => 100 * totalScore / relativeScorePerSeed.Count;
+        public double Score => 100 * totalScore / Math.Max(relativeScorePerSeed.Count, 1);
         public double RangeScore(ParameterRange range)
         {
             if (!totalScoreByRange.ContainsKey(range)) return 0;
@@ -29,7 +29,8 @@ namespace LocalEnv.Model
         private Dictionary<ParameterRange, double> totalScoreByRange = new();
         private Dictionary<ParameterRange, int> totalCasesByRange = new();
 
-        public string CodeExtension() {
+        public string CodeExtension()
+        {
             return Language switch
             {
                 "C#" => ".cs",
@@ -85,7 +86,7 @@ namespace LocalEnv.Model
             relativeScorePerSeed[seedInfo.Seed] = game.ComputeRelativeScore(seedInfo, absoluteScorePerSeed[seedInfo.Seed]);
             delta += relativeScorePerSeed[seedInfo.Seed];
             totalScore += delta;
-            foreach (ParameterRange range in totalScoreByRange.Keys)
+            foreach (ParameterRange range in seedInfo.Ranges)
                 totalScoreByRange[range] += delta;
         }
 
