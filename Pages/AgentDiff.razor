@@ -1,0 +1,42 @@
+@page "/agent-diff/"
+@inject NavigationManager navigationManager
+@inject IDbContextFactory<AppDbContext> DbFactory
+@using BlazorMonaco.Editor
+
+<h1>Compare agents: @prev?.Name - @current?.Name</h1>
+
+<MudPaper Class="mt-3" Height="800px" Width="100%">
+    <StandaloneDiffEditor @ref="diffEditor" ConstructionOptions="DiffConstructionOptions" OnDidInit="EditorOnDidInit" />
+</MudPaper>
+
+@code {
+    private Agent current;
+    private Agent prev;
+    private StandaloneDiffEditor diffEditor;
+
+    protected override void OnInitialized()
+    {
+        var query = QueryHelpers.ParseQuery(navigationManager.Uri.Split('?').Last());
+        using var context = DbFactory.CreateDbContext();
+        current = context.Agents.First(a => a.Id == int.Parse(query["current"]));
+        prev = context.Agents.First(a => a.Id == int.Parse(query["prev"]));
+    }
+
+    private async Task EditorOnDidInit()
+    {
+        TextModel prevModel = await Global.CreateModel(await prev.BundleCode(), "csharp", prev.Name);
+        TextModel currentModel = await Global.CreateModel(await current.BundleCode(), "csharp", current.Name);
+        await diffEditor.SetModel(new DiffEditorModel {
+            Original=prevModel,
+            Modified=currentModel,                        
+        });
+    }
+
+    private StandaloneDiffEditorConstructionOptions DiffConstructionOptions(StandaloneDiffEditor editor)
+    {
+        return new StandaloneDiffEditorConstructionOptions()
+            {
+                OriginalEditable = false,
+            };
+    }
+}

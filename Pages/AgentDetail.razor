@@ -13,6 +13,13 @@
             Color="Color.Primary" OnClick="Download">Download</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
             Color="Color.Primary" OnClick="Export">Export</MudButton>
+        <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff" StartIcon="@Icons.Material.Filled.Compare">
+            @foreach (Agent other in game.Agents)
+            {
+                if (other == agent) continue;
+                <MudMenuItem OnClick="()=>Diff(agent, other)">@other.Name</MudMenuItem>
+            }
+        </MudMenu>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error"
             OnClick="()=>deleteVisible=true">
             Delete</MudButton>
@@ -251,5 +258,9 @@
         context.Games.Include(g => g.Agents).First(g => g.Id == game.Id).Agents.RemoveAll(a => a.Id == agent.Id);
         context.SaveChanges();
         navigationManager.NavigateTo("/game/" + game.Id);
+    }
+
+    private async Task Diff(Agent current, Agent other) {
+        await JS.InvokeAsync<object>("open", $"agent-diff/?prev={other.Id}&current={agent.Id}", "_blank");
     }
 }
