@@ -67,13 +67,16 @@
         </MudTHeadRow>
     </HeaderContent>
     <RowTemplate Context="agent">
-        <MudTd><MudLink Target="_blank" Href=@($"/agent/{agent.Id}")>@agent.Name</MudLink></MudTd>
+        <MudTd>
+            <MudLink Target="_blank" Href=@($"/agent/{agent.Id}")>@agent.Name</MudLink>
+        </MudTd>
         <MudTd>
             @FormatNumberRank(agent.Score, game.Agents.Select(a => a.Score))
             @if (agent.Progress(game.SeedCount) != 100)
             {
                 <MudTooltip Text="@($"{agent.Progress(game.SeedCount):0.#}%")">
-                    <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@((int)agent.Progress(game.SeedCount))" />
+                    <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;"
+                    Value="@((int)agent.Progress(game.SeedCount))" />
                 </MudTooltip>
             }
         </MudTd>
@@ -164,7 +167,8 @@
 
     private void RunQueueThread()
     {
-        new Thread(async () => {
+        new Thread(async () =>
+        {
             while (true)
             {
                 Agent agent = null;
@@ -179,26 +183,12 @@
                     (agent, info) = toRun.Dequeue();
                 }
 
-                Process process = new Process();
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
-                process.StartInfo.FileName = "java";
-                process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{agent.ExecuteCommand}\"";
-                process.Start();
-                string stdOut = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                string line = stdOut.Trim();
-
-                Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
-                double score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
-                match = Regex.Match(line, @"RunTime = (?<number>\d+)");
-                int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
-                TestcaseResult result = new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
+                TestcaseResult result = agent.Run(game, info);
                 lock (toRun)
                 {
                     toStore.Add((agent, result));
-                    if (toStore.Count >= STORE_LIMIT || toRun.Count == 0) {
+                    if (toStore.Count >= STORE_LIMIT || toRun.Count == 0)
+                    {
                         using var context = DbFactory.CreateDbContext();
                         foreach (var group in toStore.GroupBy(s => s.agent.Id))
                         {
@@ -232,7 +222,8 @@
     }
 
     private void Stop() => game.Running = false;
-    private void Start() {
+    private void Start()
+    {
         game.Running = true;
         PlayQueue();
     }

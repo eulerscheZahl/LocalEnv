@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
 
 namespace LocalEnv.Model
 {
@@ -77,6 +79,26 @@ namespace LocalEnv.Model
             }
             code.InsertRange(0, usings.OrderBy(u => u));
             return string.Join(Environment.NewLine, code);
+        }
+
+        public TestcaseResult Run(Game game, SeedInfo info)
+        {
+            Process process = new Process();
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
+            process.StartInfo.FileName = "java";
+            process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{this.ExecuteCommand}\"";
+            process.Start();
+            string stdOut = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            string line = stdOut.Trim();
+
+            Match match = Regex.Match(line, @"Score = (?<number>\d+(\.\d+)?)");
+            double score = double.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
+            match = Regex.Match(line, @"RunTime = (?<number>\d+)");
+            int time = match.Success ? int.Parse(match.Groups["number"].Value) : 0;
+            return new TestcaseResult { Seed = info.Seed, Score = score, Time = time };
         }
 
         public void UpdateSeedScore(SeedInfo seedInfo, Game game)

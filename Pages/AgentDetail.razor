@@ -85,7 +85,18 @@
         </MudTh>
         <MudTh>
             <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Score)">Absolute score</MudTableSortLabel>
+            <MudMenu Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Add">
+                @foreach (Agent other in game.Agents)
+                {
+                    if (other == agent || additionalAgents.Contains(other)) continue;
+                    <MudMenuItem OnClick="()=>additionalAgents.Add(other)">@other.Name</MudMenuItem>
+                }
+            </MudMenu>
         </MudTh>
+        @foreach (Agent a in additionalAgents)
+        {
+            <MudTh>@a.Name <MudIconButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="ml-2" Icon="@Icons.Material.Filled.Delete" OnClick="()=>additionalAgents.Remove(a)"></MudIconButton></MudTh>
+        }
         <MudTh>
             <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Time)">Time</MudTableSortLabel>
         </MudTh>
@@ -102,6 +113,10 @@
         <MudTd DataLabel="Seed">@context.Seed</MudTd>
         <MudTd DataLabel="RelativeScore">@FormatNumber(RelativeScore(context.Seed, context.Score))</MudTd>
         <MudTd DataLabel="AbsoluteScore">@context.Score</MudTd>
+        @foreach (Agent a in additionalAgents)
+        {
+            <MudTh>@(a.TestcaseResults.FirstOrDefault(r => r.Seed==context.Seed)?.Score.ToString() ?? "-")</MudTh>
+        }
         <MudTd DataLabel="Time">@context.Time ms</MudTd>
         @foreach (Parameter param in game.Parameters)
         {
@@ -119,6 +134,7 @@
     [Parameter] public int Id { get; set; }
     private Game game;
     private Agent agent;
+    private List<Agent> additionalAgents = new();
     private Parameter xParam, yParam;
     private Parameter XParam
     {
