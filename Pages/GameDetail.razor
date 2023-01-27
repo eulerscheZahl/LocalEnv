@@ -72,7 +72,9 @@
             @FormatNumberRank(agent.Score, game.Agents.Select(a => a.Score))
             @if (agent.Progress(game.SeedCount) != 100)
             {
-                <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@agent.Progress(game.SeedCount)" />
+                <MudTooltip Text="@($"{agent.Progress(game.SeedCount):0.#}%")">
+                    <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;" Value="@((int)agent.Progress(game.SeedCount))" />
+                </MudTooltip>
             }
         </MudTd>
         @foreach (Parameter p in game.Parameters)

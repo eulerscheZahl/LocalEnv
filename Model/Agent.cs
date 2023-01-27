@@ -15,7 +15,7 @@ namespace LocalEnv.Model
 
         [NotMapped] public bool Running { get; set; } = true;
         public string ExecuteCommand => "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
-        public int Progress(int testcases) => 100 * TestcaseResults.Count / testcases;
+        public double Progress(int testcases) => 100.0 * TestcaseResults.Count / testcases;
         public double Score => 100 * totalScore / relativeScorePerSeed.Count;
         public double RangeScore(ParameterRange range)
         {
