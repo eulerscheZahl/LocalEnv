@@ -104,6 +104,7 @@ namespace LocalEnv.Model
             {
                 foreach (TestcaseResult result in agent.TestcaseResults)
                 {
+                    if (result.Score == -1) continue;
                     SeedInfo info = infos[result.Seed];
                     if (info.BestScore == 0) info.BestScore = result.Score;
                     else if (Maximize) info.BestScore = Math.Max(info.BestScore, result.Score);
