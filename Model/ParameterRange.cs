@@ -11,6 +11,13 @@ namespace LocalEnv.Model
 
         public override string ToString() => MinValue == MaxValue ? MinValue.ToString() : MinValue + "-" + MaxValue;
 
+        public ParameterRange() { }
+        public ParameterRange(ParameterRange range)
+        {
+            this.MinValue = range.MinValue;
+            this.MaxValue = range.MaxValue;
+        }
+
         public static ParameterRange Parse(string text)
         {
             string[] parts = text.Split('-');
@@ -23,6 +30,5 @@ namespace LocalEnv.Model
         }
 
         public bool IsMatch(ParameterValue value) => value.Value >= MinValue && value.Value <= MaxValue;
-
     }
 }

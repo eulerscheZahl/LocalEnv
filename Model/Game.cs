@@ -15,7 +15,7 @@ namespace LocalEnv.Model
         public string DisplayTitle { get; set; }
         public string ExportTitle { get; set; }
         public string TesterPath { get; set; }
-        public int SeedStart { get; set; }
+        public long SeedStart { get; set; }
         public int SeedCount { get; set; }
         public bool Maximize { get; set; }
         public bool Minimize => !Maximize;
@@ -48,7 +48,7 @@ namespace LocalEnv.Model
             return seedInfo.BestScore / score;
         }
 
-        public async Task GenerateSeedInfo(int seed)
+        public async Task GenerateSeedInfo(long seed)
         {
             SeedInfo info = SeedInfos.FirstOrDefault(s => s.Seed == seed);
             if (info != null) return;
@@ -92,7 +92,7 @@ namespace LocalEnv.Model
                     range.Testcases++;
                 }
             }
-            Dictionary<int, SeedInfo> infos = SeedInfos.ToDictionary(s => s.Seed, s => s);
+            Dictionary<long, SeedInfo> infos = SeedInfos.ToDictionary(s => s.Seed, s => s);
 
             // find best absolute scores
             if (Minimize)

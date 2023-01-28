@@ -1,6 +1,7 @@
 @page "/game/{Id:int}"
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IDialogService DialogService
+@inject NavigationManager navigationManager
 
 <style type="text/css">
     .mud-table-head .header-centered th {
@@ -33,6 +34,10 @@
     <MudButton Class="ml-5" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
         Href="@($"/game/edit/{Id}")">
         Edit
+    </MudButton>
+    <MudButton Class="ml-5" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.UploadFile" Color="Color.Primary"
+        OnClick="ImportResults">
+        Import results
     </MudButton>
 </div>
 
@@ -97,7 +102,7 @@
     private static int maxThreads = 4;
     private const int STORE_LIMIT = 50;
     private int MaxThreads { get => maxThreads; set { maxThreads = value; PlayQueue(); } }
-    private static PriorityQueue<(Agent agent, SeedInfo seedInfo), int> toRun = new();
+    private static PriorityQueue<(Agent agent, SeedInfo seedInfo), long> toRun = new();
     private static List<(Agent agent, TestcaseResult result)> toStore = new();
     private static HashSet<string> toRunSet = new();
 
@@ -146,7 +151,7 @@
 
     private void PopulateQueue(Agent agent)
     {
-        Dictionary<int, TestcaseResult> existing = agent.TestcaseResults.ToDictionary(t => t.Seed, t => t);
+        Dictionary<long, TestcaseResult> existing = agent.TestcaseResults.ToDictionary(t => t.Seed, t => t);
         foreach (SeedInfo seedInfo in game.SeedInfos)
         {
             if (existing.ContainsKey(seedInfo.Seed)) continue;
@@ -226,5 +231,18 @@
     {
         game.Running = true;
         PlayQueue();
+    }
+
+    private async Task ImportResults()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("Game", game);
+        var dialog = await DialogService.ShowAsync<ImportGameResultDialog>("Game results", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            Game game = result.Data as Game;
+            navigationManager.NavigateTo("/game/" + game.Id);
+        }
     }
 }

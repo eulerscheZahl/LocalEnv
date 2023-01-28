@@ -25,8 +25,8 @@ namespace LocalEnv.Model
             return 100 * totalScoreByRange[range] / totalCasesByRange[range];
         }
 
-        private Dictionary<int, double> relativeScorePerSeed = new();
-        private Dictionary<int, double> absoluteScorePerSeed = new();
+        private Dictionary<long, double> relativeScorePerSeed = new();
+        private Dictionary<long, double> absoluteScorePerSeed = new();
         private double totalScore = 0;
         private Dictionary<ParameterRange, double> totalScoreByRange = new();
         private Dictionary<ParameterRange, int> totalCasesByRange = new();

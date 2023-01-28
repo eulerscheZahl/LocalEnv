@@ -1,0 +1,210 @@
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<MudDialog>
+    <DialogContent>
+        <MudForm>
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadResults">
+                <ButtonTemplate Context="uploadContext">
+                    <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                        StartIcon="@Icons.Material.Filled.CloudUpload" for="@uploadContext">
+                        Upload results
+                    </MudButton>
+                </ButtonTemplate>
+            </MudFileUpload>
+            <MudText>@(file?.Name)</MudText>
+                @if (importing)
+            {
+                <MudAlert Severity="Severity.Info">
+                    <MudProgressCircular Class="mr-2" Color="Color.Primary" Size="Size.Small"
+                    Value="@(100*importedCount / seedCount)" />
+                    @currentAction
+                </MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        @if (!importing)
+        {
+            <MudButton Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Game Game { get; set; }
+
+    private bool importing;
+    private int importedCount;
+    private int seedCount = 1;
+    private string currentAction = "generating seed info";
+    private IBrowserFile file;
+    private void UploadResults(IBrowserFile toUpload) => file = toUpload;
+
+    private async Task Submit()
+    {
+        importing = true;
+        StateHasChanged();
+        string json = await new StreamReader(file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024)).ReadToEndAsync();
+
+        List<Submission> submissions = System.Text.Json.JsonSerializer.Deserialize<List<Submission>>(json);
+        submissions = submissions.Where(s => s.GetScores() != null).ToList();
+        List<long> seeds = submissions[0].GetScores().Select(s => s.testcase).ToList();
+
+        Game game = new Game
+            {
+                DisplayTitle = Game.DisplayTitle + " (final)",
+                ExportTitle = Game.ExportTitle,
+                TesterPath = Game.TesterPath,
+                Parameters = Game.Parameters.Select(p => new Parameter(p)).ToList(),
+                Agents = new(),
+                SeedStart = seeds.Min(),
+                SeedCount = seeds.Count,
+                SeedInfos = new(),
+                Maximize = Game.Maximize,
+            };
+        seedCount = seeds.Count;
+        importedCount = 0;
+        foreach (long seed in seeds)
+        {
+            await game.GenerateSeedInfo(seed);
+            importedCount++;
+            StateHasChanged();
+        }
+
+        Dictionary<long, SeedInfo> seedInfos = game.SeedInfos.ToDictionary(s => s.Seed, s => s);
+        using var context = DbFactory.CreateDbContext();
+        context.Games.Add(game);
+        importedCount = 0;
+        seedCount = submissions.Count;
+        foreach (Submission sub in submissions.OrderBy(s => s.GetAverageScore()))
+        {
+            currentAction = "importing " + sub.createdBy;
+            StateHasChanged();
+            Agent agent = new Agent { Name = sub.createdBy, TestcaseResults = new() };
+            game.Agents.Add(agent);
+            foreach (TestScore score in sub.GetScores())
+            {
+                agent.AddTestcaseResult(seedInfos[score.testcase], game, new TestcaseResult
+                    {
+                        Seed = score.testcase,
+                        Score = score.score
+                    });
+            }
+            context.SaveChanges();
+            importedCount++;
+        }
+
+        MudDialog.Close(DialogResult.Ok(game));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    // generated via https://json2csharp.com/
+    public class Metadata
+    {
+        public Tests tests { get; set; }
+        public string testType { get; set; }
+        public List<TestScore> testScores { get; set; }
+        public List<RelativeScore> relativeScores { get; set; }
+    }
+
+    public class RelativeScore
+    {
+        public double score { get; set; }
+        public string testcase { get; set; }
+    }
+
+    public class Review
+    {
+        public string updatedBy { get; set; }
+        public string reviewerId { get; set; }
+        public DateTime created { get; set; }
+        public double score { get; set; }
+        public string submissionId { get; set; }
+        public string createdBy { get; set; }
+        public int scoreCardId { get; set; }
+        public string typeId { get; set; }
+        public string id { get; set; }
+        public DateTime reviewedDate { get; set; }
+        public DateTime updated { get; set; }
+        public string status { get; set; }
+    }
+
+    public class ReviewSummation
+    {
+        public double aggregateScore { get; set; }
+        public Metadata metadata { get; set; }
+        public string updatedBy { get; set; }
+        public string submissionId { get; set; }
+        public string createdBy { get; set; }
+        public DateTime created { get; set; }
+        public int scoreCardId { get; set; }
+        public string id { get; set; }
+        public bool isPassing { get; set; }
+        public DateTime reviewedDate { get; set; }
+        public DateTime updated { get; set; }
+    }
+
+    public class Submission
+    {
+        public string updatedBy { get; set; }
+        public DateTime created { get; set; }
+        public int legacySubmissionId { get; set; }
+        public bool isFileSubmission { get; set; }
+        public string type { get; set; }
+        public DateTime submittedDate { get; set; }
+        public string url { get; set; }
+        public int challengeId { get; set; }
+        public string createdBy { get; set; }
+        public int legacyChallengeId { get; set; }
+        public List<Review> review { get; set; }
+        public List<ReviewSummation> reviewSummation { get; set; }
+        public string id { get; set; }
+        public string submissionPhaseId { get; set; }
+        public DateTime updated { get; set; }
+        public string fileType { get; set; }
+        public int memberId { get; set; }
+        public string v5ChallengeId { get; set; }
+
+        public List<TestScore> GetScores()
+        {
+            if (reviewSummation == null) return null;
+            foreach (ReviewSummation rev in reviewSummation)
+            {
+                if (rev.metadata == null) continue;
+                if (rev.metadata.tests == null) continue;
+                if (rev.metadata.tests.total < 2) continue;
+                return rev.metadata.testScores;
+            }
+            return null;
+        }
+
+        public double GetAverageScore()
+        {
+            if (reviewSummation == null) return -1;
+            foreach (ReviewSummation rev in reviewSummation)
+            {
+                if (rev.metadata == null) continue;
+                if (rev.metadata.tests == null) continue;
+                if (rev.metadata.tests.total < 2) continue;
+                return rev.aggregateScore;
+            }
+            return -1;
+        }
+    }
+
+    public class Tests
+    {
+        public int total { get; set; }
+        public int passed { get; set; }
+        public int failed { get; set; }
+    }
+
+    public class TestScore
+    {
+        public int score { get; set; }
+        public long testcase { get; set; }
+    }
+}

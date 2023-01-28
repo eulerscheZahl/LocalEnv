@@ -6,7 +6,7 @@ namespace LocalEnv.Model
     public class TestcaseResult
     {
         public int Id { get; set; }
-        public int Seed { get; set; }
+        public long Seed { get; set; }
         public double Score { get; set; }
         public string AdditionalOutput { get; set; }
         public int Time { get; set; }

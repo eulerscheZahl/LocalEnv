@@ -181,7 +181,7 @@
             UpdateDetails();
         }
     }
-    private Dictionary<int, SeedInfo> seedInfos = new();
+    private Dictionary<long, SeedInfo> seedInfos = new();
     private bool deleteVisible;
     private List<List<string>> detailsTable = new();
 
@@ -210,7 +210,7 @@
         paramFilter = new string[game.Parameters.Count];
     }
 
-    private double RelativeScore(int seed, double absoluteScore)
+    private double RelativeScore(long seed, double absoluteScore)
     => game.ComputeRelativeScore(seedInfos[seed], absoluteScore);
 
     private string FormatNumber(double number)
@@ -222,7 +222,7 @@
     private void UpdateDetails()
     {
         detailsTable.Clear();
-        Dictionary<int, double> agentScores = agent.TestcaseResults.ToDictionary(r => r.Seed, r => r.Score);
+        Dictionary<long, double> agentScores = agent.TestcaseResults.ToDictionary(r => r.Seed, r => r.Score);
         foreach (ParameterRange y in YParam.Ranges)
         {
             List<string> row = new() { y.ToString() };
@@ -230,7 +230,7 @@
             foreach (ParameterRange x in XParam.Ranges)
             {
                 List<SeedInfo> cellSeeds = infos.Where(s => s.Ranges.Contains(x)).ToList();
-                HashSet<int> seeds = cellSeeds.Select(s => s.Seed).ToHashSet();
+                HashSet<long> seeds = cellSeeds.Select(s => s.Seed).ToHashSet();
                 List<double> scores = cellSeeds.Select(s => RelativeScore(s.Seed, agentScores[s.Seed])).ToList();
                 if (scores.Count > 0)
                 {
