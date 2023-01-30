@@ -71,11 +71,9 @@
         await file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024).CopyToAsync(fs);
         fs.Close();
 
-        agent.BinaryPath = Game.Folder + agent.Id + "/binary/project.dll";
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetDirectoryName(agent.BinaryPath)));
         compiling = true;
         StateHasChanged();
-        await agent.Compile();
+        await agent.Compile(Game);
 
         context.SaveChanges();
         MudDialog.Close(DialogResult.Ok(agent));

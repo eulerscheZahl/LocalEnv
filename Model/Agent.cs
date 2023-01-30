@@ -16,7 +16,13 @@ namespace LocalEnv.Model
         public List<TestcaseResult> TestcaseResults { get; set; }
 
         [NotMapped] public bool Running { get; set; } = true;
-        public string ExecuteCommand => "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
+        public string ExecuteCommand()
+        {
+            if (Language == "C#") return "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
+            if (Language == "C++") return Directory.GetCurrentDirectory() + "/" + BinaryPath;
+            if (Language == "Java") return "java -jar " + Directory.GetCurrentDirectory() + "/" + BinaryPath + ".jar";
+            return "python3 " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
+        }
         public double Progress(int testcases) => 100.0 * TestcaseResults.Count / testcases;
         public double Score => 100 * totalScore / Math.Max(relativeScorePerSeed.Count, 1);
         public double RangeScore(ParameterRange range)
@@ -42,20 +48,50 @@ namespace LocalEnv.Model
             };
         }
 
-        public async Task Compile()
+        public async Task Compile(Game game)
         {
+            string binaryDir = game.Folder + this.Id + "/binary/";
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetDirectoryName(binaryDir)));
             string tmpDir = Path.GetTempPath() + Guid.NewGuid() + "/";
             Directory.CreateDirectory(tmpDir);
-            File.WriteAllText(tmpDir + "project.csproj",
+            Directory.CreateDirectory(binaryDir);
+            if (Language == "C#")
+            {
+                File.WriteAllText(tmpDir + "project.csproj",
 @"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 </Project>");
-            File.WriteAllText(tmpDir + "code.cs", await BundleCode());
-            Process process = Process.Start("dotnet", "publish " + tmpDir + "project.csproj" + " -c Release -o " + Directory.GetCurrentDirectory() + "/" + Path.GetDirectoryName(BinaryPath));
-            await process.WaitForExitAsync();
+                File.WriteAllText(tmpDir + "code.cs", await BundleCode());
+                this.BinaryPath = binaryDir + "project.dll";
+                Process process = Process.Start("dotnet", "publish " + tmpDir + "project.csproj" + " -c Release -o " + Directory.GetCurrentDirectory() + "/" + Path.GetDirectoryName(BinaryPath));
+                await process.WaitForExitAsync();
+            }
+            else if (Language == "C++")
+            {
+                File.WriteAllText(tmpDir + "code.cpp", await BundleCode());
+                this.BinaryPath = binaryDir + "code.exe";
+                Process process = Process.Start("g++", "--std=c++17 -O3 -o " + Directory.GetCurrentDirectory() + "/" + BinaryPath + " " + tmpDir + "code.cpp");
+                await process.WaitForExitAsync();
+            }
+            else if (Language == "Java")
+            {
+                File.WriteAllText(tmpDir + game.ExportTitle + ".java", await BundleCode());
+                this.BinaryPath = binaryDir + game.ExportTitle;
+                binaryDir = Directory.GetCurrentDirectory() + "/" + binaryDir;
+                File.WriteAllText(BinaryPath + ".mf", "Manifest-Version: 1.0\nMain-Class: " + game.ExportTitle);
+                Process process = Process.Start("javac", "-d " + Directory.GetCurrentDirectory() + "/" + Path.GetDirectoryName(BinaryPath) + " " + tmpDir + game.ExportTitle + ".java");
+                await process.WaitForExitAsync();
+                process = Process.Start("jar", $"cfm {binaryDir + game.ExportTitle}.jar {binaryDir + game.ExportTitle}.mf {binaryDir}*.class");
+                await process.WaitForExitAsync();
+            }
+            else
+            {
+                this.BinaryPath = binaryDir + "code.py";
+                File.WriteAllText(this.BinaryPath, await BundleCode());
+            }
         }
 
         public async Task<string> BundleCode()
@@ -67,6 +103,7 @@ namespace LocalEnv.Model
             {
                 StreamReader reader = new StreamReader(entry.Open());
                 string content = await reader.ReadToEndAsync();
+                if (Language != "C#") return content; // only support single file
                 bool inUsings = true;
                 code.Add("");
                 code.Add("");
@@ -88,7 +125,7 @@ namespace LocalEnv.Model
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
             process.StartInfo.FileName = "java";
-            process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{this.ExecuteCommand}\"";
+            process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{this.ExecuteCommand()}\"";
             process.Start();
             string stdOut = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
