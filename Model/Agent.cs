@@ -81,10 +81,11 @@ namespace LocalEnv.Model
                 File.WriteAllText(tmpDir + game.ExportTitle + ".java", await BundleCode());
                 this.BinaryPath = binaryDir + game.ExportTitle;
                 binaryDir = Directory.GetCurrentDirectory() + "/" + binaryDir;
-                File.WriteAllText(BinaryPath + ".mf", "Manifest-Version: 1.0\nMain-Class: " + game.ExportTitle);
+                File.WriteAllText(BinaryPath + ".mf", "Manifest-Version: 1.0\nMain-Class: " + game.ExportTitle + "\n");
                 Process process = Process.Start("javac", "-d " + Directory.GetCurrentDirectory() + "/" + Path.GetDirectoryName(BinaryPath) + " " + tmpDir + game.ExportTitle + ".java");
                 await process.WaitForExitAsync();
-                process = Process.Start("jar", $"cfm {binaryDir + game.ExportTitle}.jar {binaryDir + game.ExportTitle}.mf {binaryDir}*.class");
+                List<string> classes = new DirectoryInfo(binaryDir).GetFiles("*.class").Select(f => f.Name).ToList();
+                process = Process.Start(new ProcessStartInfo { FileName = "jar", WorkingDirectory = binaryDir, Arguments = $"cfm {game.ExportTitle}.jar {game.ExportTitle}.mf " + string.Join(" ", classes) });
                 await process.WaitForExitAsync();
             }
             else
