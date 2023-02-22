@@ -70,7 +70,7 @@ namespace LocalEnv.Model
             string[] lines = stdOut.Split("\r\n".ToCharArray());
             foreach (string line in lines)
             {
-                Match match = Regex.Match(line, @"(?<var>\w+) = (?<number>\d+(\.\d+)?)");
+                Match match = Regex.Match(line, @"(?<var>\w+) = (?<number>\d+(\.\d+)?(E\-?\d+)?)");
                 if (!match.Success) continue;
                 string variable = match.Groups["var"].Value;
                 string number = match.Groups["number"].Value;
