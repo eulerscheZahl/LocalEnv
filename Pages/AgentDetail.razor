@@ -13,7 +13,7 @@
             Color="Color.Primary" OnClick="Download">Download</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
             Color="Color.Primary" OnClick="Export">Export</MudButton>
-        <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff"
+        <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff" Dense="true"
             StartIcon="@Icons.Material.Filled.Compare">
             @foreach (Agent other in game.Agents)
             {
@@ -97,7 +97,7 @@
         </MudTh>
         <MudTh>
             <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Score)">Absolute score</MudTableSortLabel>
-            <MudMenu Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Add">
+            <MudMenu Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Dense="true" Icon="@Icons.Material.Filled.Add">
                 @foreach (Agent other in game.Agents)
                 {
                     if (other == agent || additionalAgents.Contains(other)) continue;

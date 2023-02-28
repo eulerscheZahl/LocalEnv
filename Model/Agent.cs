@@ -126,7 +126,7 @@ namespace LocalEnv.Model
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + game.TesterPath);
             process.StartInfo.FileName = "java";
-            process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -seed {info.Seed} -exec \"{this.ExecuteCommand()}\"";
+            process.StartInfo.Arguments = $"-jar \"{Path.GetFileName(game.TesterPath)}\" -printRuntime -novis -tl 35000 -seed {info.Seed} -exec \"{this.ExecuteCommand()}\"";
             process.Start();
             string stdOut = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
