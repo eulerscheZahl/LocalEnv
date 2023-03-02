@@ -62,6 +62,7 @@ namespace LocalEnv.Model
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <DefineConstants>LOCAL_ENV</DefineConstants>
   </PropertyGroup>
 </Project>");
                 File.WriteAllText(tmpDir + "code.cs", await BundleCode());
@@ -73,7 +74,7 @@ namespace LocalEnv.Model
             {
                 File.WriteAllText(tmpDir + "code.cpp", await BundleCode());
                 this.BinaryPath = binaryDir + "code.exe";
-                Process process = Process.Start("g++", "--std=c++17 -O3 -o " + Directory.GetCurrentDirectory() + "/" + BinaryPath + " " + tmpDir + "code.cpp");
+                Process process = Process.Start("g++", "--std=c++17 -DLOCAL_ENV -O3 -o " + Directory.GetCurrentDirectory() + "/" + BinaryPath + " " + tmpDir + "code.cpp");
                 await process.WaitForExitAsync();
             }
             else if (Language == "Java")
