@@ -34,7 +34,7 @@
     {
         if (Parameter.Ranges == null) Parameter.Ranges = new();
         Parameter.Ranges.Clear();
-        foreach (string part in ranges.Split(',')) Parameter.Ranges.Add(ParameterRange.Parse(part));
+        foreach (string part in ranges.Split(',')) Parameter.Ranges.AddRange(ParameterRange.Parse(part));
         MudDialog.Close(DialogResult.Ok(true));
     }
 
