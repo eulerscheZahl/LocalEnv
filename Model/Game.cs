@@ -64,6 +64,7 @@ namespace LocalEnv.Model
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.FileName = "java";
             process.StartInfo.Arguments = $"-jar {TesterPath} -debug -novis -seed {seed}";
+            process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + TesterPath);
             process.Start();
             string stdOut = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();

@@ -84,6 +84,10 @@
 <h2 class="mt-3">Testcase details</h2>
 <MudTable Dense="true" Striped="true" Hover="true" SortLabel="Sort By" Items="@agent.TestcaseResults"
     Filter="new Func<TestcaseResult,bool>(TableFilter)">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.TableView" Color="Color.Primary" OnClick="ExportScores">Export</MudButton>
+    </ToolBarContent>
     <HeaderContent>
         <MudTh>
             <MudTableSortLabel InitialDirection="SortDirection.Ascending"
@@ -221,6 +225,7 @@
 
     private void UpdateDetails()
     {
+        if (YParam == null) return;
         detailsTable.Clear();
         Dictionary<long, double> agentScores = agent.TestcaseResults.ToDictionary(r => r.Seed, r => r.Score);
         foreach (ParameterRange y in YParam.Ranges)
@@ -271,6 +276,33 @@
             using var streamRef = new DotNetStreamReference(stream: memoryStream);
             await JS.InvokeVoidAsync("downloadFileFromStream", game.ExportTitle + ".zip", streamRef);
         }
+    }
+
+    private async Task ExportScores()
+    {
+        List<List<string>> rows = new() {new() {"Seed", "Relative Score", "Absolute Score"}};
+        rows[0].AddRange(additionalInfo);
+        rows[0].Add("Time");
+
+        foreach (TestcaseResult result in agent.TestcaseResults.OrderBy(r => r.Seed)) {
+            List<string> row = new();
+            row.Add(result.Seed.ToString());
+            row.Add(FormatNumber(RelativeScore(result.Seed, result.Score)));
+            row.Add(result.Score.ToString());
+            foreach (string info in additionalInfo) {
+                row.Add(result.AdditionalValues().ContainsKey(info) ? result.AdditionalValues()[info].ToString() : "-");
+            }
+            row.Add(result.Time.ToString());
+            rows.Add(row);
+        }
+
+        MemoryStream stream = new();
+        StreamWriter writer = new(stream);
+        writer.Write(string.Join("\n", rows.Select(r => string.Join("\t", r))));
+        writer.Flush();
+        stream.Position = 0;
+        using var streamRef = new DotNetStreamReference(stream: stream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", "scores-" + agent.Name + ".csv", streamRef);
     }
 
     private void Delete()
