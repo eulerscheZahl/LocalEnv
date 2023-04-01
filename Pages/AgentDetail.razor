@@ -15,7 +15,7 @@
             Color="Color.Primary" OnClick="Export">Export</MudButton>
         <MudMenu Color="Color.Primary" Class="ml-2" Variant="Variant.Filled" Label="Diff" Dense="true"
             StartIcon="@Icons.Material.Filled.Compare">
-            @foreach (Agent other in game.Agents)
+            @foreach (Agent other in game.Agents.OrderByDescending(a => a.Id))
             {
                 if (other == agent) continue;
                 <MudMenuItem OnClick="()=>Diff(agent, other)">@other.Name</MudMenuItem>
@@ -102,13 +102,14 @@
         <MudTh>
             <MudTableSortLabel SortBy="new Func<TestcaseResult, object>(x=>x.Score)">Absolute score</MudTableSortLabel>
             <MudMenu Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Dense="true" Icon="@Icons.Material.Filled.Add">
-                @foreach (Agent other in game.Agents)
+                @foreach (Agent other in game.Agents.OrderByDescending(a => a.Id))
                 {
                     if (other == agent || additionalAgents.Contains(other)) continue;
                     <MudMenuItem OnClick="()=>additionalAgents.Add(other)">@other.Name</MudMenuItem>
                 }
             </MudMenu>
         </MudTh>
+        <MudTh>Best score</MudTh>
         @foreach (Agent a in additionalAgents)
         {
             <MudTh>@a.Name <MudIconButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="ml-2"
@@ -138,6 +139,11 @@
         <MudTd DataLabel="Seed">@context.Seed</MudTd>
         <MudTd DataLabel="RelativeScore">@FormatNumber(RelativeScore(context.Seed, context.Score))</MudTd>
         <MudTd DataLabel="AbsoluteScore">@context.Score</MudTd>
+        <MudTd DataLabel="Best">
+            <MudTooltip Text="@GetBestAgents(context.Seed)">
+                @seedInfos[context.Seed].BestScore
+            </MudTooltip>
+        </MudTd>
         @foreach (Agent a in additionalAgents)
         {
             <MudTh>@(a.TestcaseResults.FirstOrDefault(r => r.Seed == context.Seed)?.Score.ToString() ?? "-")</MudTh>
@@ -216,6 +222,12 @@
 
     private double RelativeScore(long seed, double absoluteScore)
     => game.ComputeRelativeScore(seedInfos[seed], absoluteScore);
+
+    private string GetBestAgents(long seed) {
+        double bestScore = seedInfos[seed].BestScore;
+        List<Agent> best = game.Agents.Where(a => a.TestcaseResults.Any(t => t.Seed == seed && t.Score == bestScore)).ToList();
+        return string.Join(", ", best.Select(a => a.Name));
+    }
 
     private string FormatNumber(double number)
     {
