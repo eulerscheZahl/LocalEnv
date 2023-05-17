@@ -62,11 +62,13 @@ namespace LocalEnv.Model
             Process process = new Process();
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
             process.StartInfo.FileName = "java";
-            process.StartInfo.Arguments = $"-jar {TesterPath} -debug -novis -seed {seed}";
+            process.StartInfo.Arguments = $"-jar {Path.GetFileName(TesterPath)} -debug -novis -seed {seed}";
             process.StartInfo.WorkingDirectory = Path.GetDirectoryName(Directory.GetCurrentDirectory() + "/" + TesterPath);
             process.Start();
             string stdOut = await process.StandardOutput.ReadToEndAsync();
+            string stdErr = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
             string[] lines = stdOut.Split("\r\n".ToCharArray());
             foreach (string line in lines)
