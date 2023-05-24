@@ -27,7 +27,7 @@
     else
     {
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Primary"
-        OnClick="Start">
+            OnClick="Start">
             Start
         </MudButton>
     }
@@ -81,7 +81,7 @@
             {
                 <MudTooltip Text="@($"{agent.Progress(game.SeedCount):0.#}%")">
                     <MudProgressCircular Class="ml-2" Color="Color.Primary" Style="height:16px;width:16px;"
-                    Value="@((int)agent.Progress(game.SeedCount))" />
+                        Value="@((int)agent.Progress(game.SeedCount))" />
                 </MudTooltip>
             }
         </MudTd>
@@ -197,9 +197,23 @@
                         using var context = DbFactory.CreateDbContext();
                         foreach (var group in toStore.GroupBy(s => s.agent.Id))
                         {
-                            Agent dbAgent = context.Agents.Include(a => a.TestcaseResults).First(a => a.Id == group.Key);
-                            dbAgent.TestcaseResults.AddRange(group.Select(g => g.result));
-                            foreach (TestcaseResult t in group.Select(x => x.result)) toRunSet.Remove(dbAgent.Id + ":" + t.Seed);
+                            Agent dbAgent = context.Agents.Include(a => a.TestcaseResults).FirstOrDefault(a => a.Id == group.Key);
+                            if (dbAgent == null)
+                            {
+                                game.Agents.RemoveAll(a => a.Id == group.Key);
+                                PriorityQueue<(Agent agent, SeedInfo seedInfo), long> newQueue = new();
+                                while (toRun.Count > 0) {
+                                    var queueItem = toRun.Dequeue();
+                                    if (queueItem.agent.Id != group.Key) newQueue.Enqueue(queueItem, queueItem.seedInfo.Seed);
+                                    else toRunSet.Remove(group.Key + ":" + queueItem.seedInfo.Seed);
+                                }
+                                toRun = newQueue;
+                            }
+                            else
+                            {
+                                dbAgent.TestcaseResults.AddRange(group.Select(g => g.result));
+                                foreach (TestcaseResult t in group.Select(x => x.result)) toRunSet.Remove(dbAgent.Id + ":" + t.Seed);
+                            }
                         }
                         context.SaveChanges();
                         toStore.Clear();
