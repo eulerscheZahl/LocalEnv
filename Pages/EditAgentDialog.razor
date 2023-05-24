@@ -1,0 +1,33 @@
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@Agent">
+            <DataAnnotationsValidator />
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Name" @bind-Value="Agent.Name" For="@(() => Agent.Name)" />
+                </MudCardContent>
+            </MudCard>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Agent Agent { get; set; }
+
+    private async Task Submit()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Update(Agent);
+        context.SaveChanges();
+        MudDialog.Close(DialogResult.Ok(Agent));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -9,6 +9,8 @@
 <MudCard>
     <MudCardActions>
         <MudButton Variant="Variant.Filled" Href=@($"/game/{game.Id}")>Back to game</MudButton>
+        <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Edit"
+            Color="Color.Primary" OnClick="Edit">Edit</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.Download"
             Color="Color.Primary" OnClick="Download">Download</MudButton>
         <MudButton Variant="Variant.Filled" Class="ml-2" StartIcon="@Icons.Material.Filled.FolderZip"
@@ -288,6 +290,15 @@
             using var streamRef = new DotNetStreamReference(stream: memoryStream);
             await JS.InvokeVoidAsync("downloadFileFromStream", game.ExportTitle + ".zip", streamRef);
         }
+    }
+
+    private async Task Edit()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("Agent", agent);
+        var dialog = await DialogService.ShowAsync<EditAgentDialog>("Agent", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled) agent.Name = (result.Data as Agent).Name;
     }
 
     private async Task ExportScores()
