@@ -45,6 +45,7 @@ namespace LocalEnv.Model
                 foreach (Agent agent in Agents) agent.UpdateSeedScore(seedInfo, this);
                 return 1;
             }
+            if (score == 0) return 1;
             return seedInfo.BestScore / score;
         }
 
