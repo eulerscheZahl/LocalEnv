@@ -12,6 +12,15 @@ Either compile it yourself or get a pre-built version from https://github.com/eu
 To launch it, use `dotnet LocalEnv.dll`, then visit https://localhost:5000/
 You might have to instruct your browser to trust that page despite missing certificate.
 
+### Features
+Compare agents
+![](docs/game-overview.png)
+
+Detailed view of an agent
+![](docs/agent.png)
+
+Compare codes
+![](docs/diff.png)
 ### Use
 #### Create a new game
 `Display title` is shown in the local environment and can be something like "MM143".
