@@ -9,7 +9,7 @@ Compile it with `dotnet publish -c Release`. Create a new database with `dotnet 
 
 ### Execute
 Either compile it yourself or get a pre-built version from https://github.com/eulerscheZahl/LocalEnv/releases
-To launch it, use `dotnet LocalEnv.dll`, then visit https://localhost:5001/
+To launch it, use `dotnet LocalEnv.dll`, then visit https://localhost:5000/
 You might have to instruct your browser to trust that page despite missing certificate.
 
 ### Use
