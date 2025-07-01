@@ -54,6 +54,9 @@
         <MudTHeadRow Class="header-centered">
             <MudTh></MudTh>
             <MudTh></MudTh>
+            <MudTh></MudTh>
+            <MudTh></MudTh>
+            <MudTh></MudTh>
             @foreach (Parameter p in game.Parameters)
             {
                 <MudTh colspan="@p.Ranges.Count">@p.DisplayName</MudTh>
@@ -62,6 +65,9 @@
         <MudTHeadRow>
             <MudTh>Agent Name</MudTh>
             <MudTh>Score [@game.SeedCount]</MudTh>
+            <MudTh>Fails</MudTh>
+            <MudTh>Best</MudTh>
+            <MudTh>Unique</MudTh>
             @foreach (Parameter p in game.Parameters)
             {
                 @foreach (ParameterRange range in p.Ranges)
@@ -85,6 +91,9 @@
                 </MudTooltip>
             }
         </MudTd>
+        <MudTd>@agent.TestcaseResults.Count(r => r.Score < 0)</MudTd>
+        <MudTd>@agent.TestcaseResults.Count(r => r.Score == game.GetSeedInfo(r.Seed)?.BestScore)</MudTd>
+        <MudTd>@agent.TestcaseResults.Count(r => r.Score == game.GetSeedInfo(r.Seed)?.BestScore && game.Agents.Count(a => a.GetResult(r.Seed)?.Score == r.Score) == 1)</MudTd>
         @foreach (Parameter p in game.Parameters)
         {
             @foreach (ParameterRange range in p.Ranges)

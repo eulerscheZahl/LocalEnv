@@ -24,6 +24,7 @@ namespace LocalEnv.Model
         public List<SeedInfo> SeedInfos { get; set; }
         public string Folder => $"wwwroot/uploads/{Id}/";
         [NotMapped] public bool Running { get; set; } = true;
+        private Dictionary<long, SeedInfo> seedInfoDict = new();
 
         public double ComputeRelativeScore(SeedInfo seedInfo, double score)
         {
@@ -103,7 +104,7 @@ namespace LocalEnv.Model
             {
                 foreach (SeedInfo info in SeedInfos) info.BestScore = double.MaxValue;
             }
-            
+
             foreach (Agent agent in Agents)
             {
                 foreach (TestcaseResult result in agent.TestcaseResults)
@@ -124,6 +125,12 @@ namespace LocalEnv.Model
                     agent.LoadTestcaseResult(infos[result.Seed], this, result);
                 }
             }
+        }
+
+        public SeedInfo GetSeedInfo(long seed)
+        {
+            if (seedInfoDict.Count != SeedInfos.Count) seedInfoDict = SeedInfos.ToDictionary(s => s.Seed, s => s);
+            return seedInfoDict.GetValueOrDefault(seed);
         }
     }
 }

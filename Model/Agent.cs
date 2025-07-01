@@ -16,6 +16,7 @@ namespace LocalEnv.Model
         public List<TestcaseResult> TestcaseResults { get; set; }
 
         [NotMapped] public bool Running { get; set; } = true;
+        private Dictionary<long, TestcaseResult> resultDict = new();
         public string ExecuteCommand()
         {
             if (Language == "C#") return "dotnet " + Directory.GetCurrentDirectory() + "/" + BinaryPath;
@@ -177,6 +178,12 @@ namespace LocalEnv.Model
                 totalScoreByRange[range] += relativeScorePerSeed[seedInfo.Seed];
                 totalCasesByRange[range]++;
             }
+        }
+
+        public TestcaseResult GetResult(long seed)
+        {
+            if (resultDict.Count != TestcaseResults.Count) resultDict = TestcaseResults.ToDictionary(r => r.Seed, r => r);
+            return resultDict.GetValueOrDefault(seed);
         }
     }
 }

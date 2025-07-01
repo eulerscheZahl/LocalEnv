@@ -306,7 +306,7 @@
         List<List<string>> rows = new() {new() {"Seed", "Relative Score", "Absolute Score"}};
         rows[0].AddRange(additionalInfo);
         rows[0].Add("Time");
-
+        rows[0].AddRange(game.Parameters.Select(p => p.DisplayName));
         foreach (TestcaseResult result in agent.TestcaseResults.OrderBy(r => r.Seed)) {
             List<string> row = new();
             row.Add(result.Seed.ToString());
@@ -316,6 +316,7 @@
                 row.Add(result.AdditionalValues().ContainsKey(info) ? result.AdditionalValues()[info].ToString() : "-");
             }
             row.Add(result.Time.ToString());
+            row.AddRange(game.Parameters.Select(p => seedInfos[result.Seed].ParameterValues.First(v=>v.Parameter.Id==p.Id).Value.ToString()));
             rows.Add(row);
         }
 
